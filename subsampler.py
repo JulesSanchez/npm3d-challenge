@@ -2,7 +2,8 @@ import numpy as np
 
 def get_even_number(data,label,size=1000):
     #We assume size > n_label for each label
-    list_labels = np.unique(label)
+    list_labels, counts = np.unique(label, return_counts=True)
+    size = min(np.min(counts),size)
     new_data = []
     new_label = []
     for k in range(len(list_labels)):
