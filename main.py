@@ -8,7 +8,7 @@ import pickle
 
 PATH = 'data/MiniChallenge/training'
 EXTENSION = '.ply'
-SIZE = 10000
+SIZE = 1000
 RADIUS = 0.5
 CLASSES = ['Unclassified','Ground','Building','Poles','Pedestrians','Cars','Vegetation']
 
@@ -49,7 +49,8 @@ if __name__ == '__main__':
         print('Validation accuracy : ' +str(val_score))
         for k in range(1,len(CLASSES)):
             indices = new_val_label == k
-            print('Validation accuracy for label ' + CLASSES[k] +' : '  +str(val_score))
+            local_val_score = classifier.score(features_test[indices],new_val_label[indices])
+            print('Validation accuracy for label ' + CLASSES[k] +' : '  +str(local_val_score))
 
 
         classifiers.append(classifier)
