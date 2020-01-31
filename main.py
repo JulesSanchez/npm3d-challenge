@@ -29,7 +29,7 @@ if __name__ == '__main__':
         classifier.fit(features,labels)
         print('Training accuracy : ' +str(classifier.score(features,labels)))
 
-        val_cloud, val_label, tree = load_point_cloud(os.path.join(PATH,data_local['test'][0])+EXTENSION)
+        val_cloud, val_label, tree = load_point_cloud(os.path.join(PATH,data_local['val'][0])+EXTENSION)
         verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(val_cloud,val_cloud,tree,radius=0.5)
         features_test = np.vstack((verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature)).T
         print('Validation accuracy : ' +str(classifier.score(features_test,val_label)))
