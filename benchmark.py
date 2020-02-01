@@ -25,7 +25,7 @@ if __name__ == '__main__':
     best_score = 0
     best_classifier = 0
 
-    for k in range(len(data_cross_val)):
+    for k in range(len(data_cross_val) - 1):
         # assemble training point cloud data
         data_local = data_cross_val[k]
         train_cloud1, train_label1, tree1 = load_point_cloud(os.path.join(PATH,data_local['training'][0])+EXTENSION)
@@ -64,7 +64,6 @@ if __name__ == '__main__':
         features_2 = np.append(features_2_cov, features_2_shape,axis=1)
         
         features = np.append(features_1,features_2,axis=0)
-        print(features.shape)
         labels = np.append(new_train_label1,new_train_label2,axis=0)
 
         classifier = xgb.XGBClassifier()
@@ -78,6 +77,7 @@ if __name__ == '__main__':
         #Ram friendly evaluation
         labels_predicted = []
         n_split = len(new_val_cloud)//100
+        t1 = time.time()
         for i in range(n_split+1):
             local_val_cloud = new_val_cloud[i*100:min((i+1)*100,len(new_val_cloud))]
             verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(local_val_cloud,val_cloud,tree,radius=RADIUS_COV)
@@ -86,7 +86,9 @@ if __name__ == '__main__':
             features_test_shape = np.vstack((A1, A2, A3, A4, D3)).T
             features_test = np.append(features_test_cov, features_test_shape,axis=1)
             labels_predicted += list(classifier.predict(features_test))
+        labels_predicted = np.array(labels_predicted)
         val_score = accuracy_score(new_val_label,labels_predicted)
+        print('Time to score on ' +data_local['val'][0] + ' : ' + str(time.time() - t1) )
         print('Validation accuracy : ' +str(val_score))
         for i in range(1,len(CLASSES)):
             indices = new_val_label == i
@@ -94,13 +96,14 @@ if __name__ == '__main__':
             if math.isnan(local_val_score):
                 continue
             print('Validation accuracy for label ' + CLASSES[i] +' : '  +str(local_val_score))
-
+        pickle.dump(labels_predicted, open('labels_predicted.pickle','wb'))
+        pickle.dump(val_cloud, open('val_cloud.pickle','wb'))
+        
 
         classifiers.append(classifier)
         if val_score > best_score:
             best_classifier = k
             best_score = val_score
-        break
     
     pickle.dump(classifiers[best_classifier], open(str(SIZE/1000) + 'Kclassifier.pickle','wb'))
 
