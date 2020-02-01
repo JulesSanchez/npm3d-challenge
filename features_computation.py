@@ -32,7 +32,12 @@ def neighborhood_PCA(query_points, cloud_points, tree, radius):
 
 
 def compute_covariance_features(query_points, cloud_points, tree, radius):
-
+    """
+    
+    Returns
+    -------
+    # TODO document this
+    """
     all_eigenvalues, all_eigenvectors = neighborhood_PCA(query_points,cloud_points,tree,radius)
     normals = all_eigenvectors[:,:,0].reshape(-1,3)
     ez = np.array([0,0,1])

@@ -16,4 +16,3 @@ def get_even_number(data,label,size=1000):
         new_data.append(data_local[new_indices])
         new_label += [local_label]*size
     return np.array(new_data).reshape(-1,3), np.array(new_label)
-        
