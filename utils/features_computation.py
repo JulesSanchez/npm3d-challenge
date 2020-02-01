@@ -5,23 +5,6 @@ from utils.features.pca import *
 EPSILON = 1e-10
 
 
-def compute_covariance_features(query_points, cloud_points, tree, radius):
-
-    all_eigenvalues, all_eigenvectors = neighborhood_PCA(query_points,cloud_points,tree,radius)
-    normals = all_eigenvectors[:,:,0].reshape(-1,3)
-    ez = np.array([0,0,1])
-    verticality = 2*np.arcsin(np.abs(np.dot(normals,ez)))/np.pi
-    linearity = 1 - all_eigenvalues[:,1]/(all_eigenvalues[:,2]+ EPSILON)
-    planarity = (all_eigenvalues[:,1]-all_eigenvalues[:,0])/(all_eigenvalues[:,2]+ EPSILON)
-    sphericity = all_eigenvalues[:,0]/(all_eigenvalues[:,2]+ EPSILON)
-    omnivariance = all_eigenvalues[:,0]*all_eigenvalues[:,1]*all_eigenvalues[:,2]
-    omnivariance = np.sign(omnivariance) * (np.abs(omnivariance)) ** (1 / 3)
-    anisotropy = (all_eigenvalues[:,2]-all_eigenvalues[:,0])/(all_eigenvalues[:,2]+ EPSILON)    
-    eigenentropy = -(np.sum(all_eigenvalues*np.log(all_eigenvalues+EPSILON),axis=1))
-    sumeigen = np.sum(all_eigenvalues,axis=1)
-    change_curvature = all_eigenvalues[:,0]/(sumeigen+EPSILON)
-    return verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature
-
 def shape_distributions(query_points, cloud_points, tree, radius=2.5, pulls=255, bins=10):
     #Pulls is the number of time we compute shape distributions for each points
 
