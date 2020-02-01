@@ -25,7 +25,7 @@ if __name__ == '__main__':
     best_classifier = 0
 
     for k in range(len(data_cross_val)):
-
+        # assemble training point cloud data
         data_local = data_cross_val[k]
         train_cloud1, train_label1, tree1 = load_point_cloud(os.path.join(PATH,data_local['training'][0])+EXTENSION)
         train_cloud2, train_label2, tree2 = load_point_cloud(os.path.join(PATH,data_local['training'][1])+EXTENSION)

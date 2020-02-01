@@ -1,0 +1,4 @@
+numpy
+open3d
+plyfile
+pytorch>=1.4.0
