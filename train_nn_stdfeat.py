@@ -7,7 +7,7 @@ from torch import optim
 import tqdm
 
 from models.deep_stdfeatures import Net
-from loader import MyPointCloud
+from utils.loader import MyPointCloud
 
 from torch.utils.data import DataLoader
 
@@ -38,7 +38,7 @@ NUM_EPOCHS = 50
 
 if __name__ == "__main__":
     dataset = MyPointCloud("data/MiniChallenge/training/MiniLille1.ply")
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
     model = Net(9)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     train(model, optimizer, dataset, NUM_EPOCHS)

@@ -7,7 +7,8 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
-from subsampler import get_even_number
+from utils.subsampler import get_even_number
+from utils.features_computation import compute_covariance_features
 
 NAMEFILES = ['MiniLille1','MiniLille2','MiniParis1']
 NAMETEST = ['MiniDijon9']

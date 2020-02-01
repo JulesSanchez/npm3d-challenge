@@ -16,7 +16,7 @@ class Net(nn.Module):
             nn.ReLU()
         )
         self.lin2 = nn.Linear(hidden_size, 7)
-        self.out = nn.Softmax(dim=1)
+        self.out = nn.LogSoftmax(dim=1)  # this works with NLLLoss
         
 
     def forward(self, x: Tensor):
