@@ -13,6 +13,10 @@ from utils.features_computation import compute_covariance_features
 NAMEFILES = ['MiniLille1','MiniLille2','MiniParis1']
 NAMETEST = ['MiniDijon9']
 
+CLASSES = ['Unclassified', 'Ground', 'Building',
+           'Poles', 'Pedestrians', 'Cars', 'Vegetation']
+
+
 def load_point_cloud(name,down_sample=False):
     """Load the point cloud.
     
@@ -91,3 +95,13 @@ class MyPointCloud(Dataset):
         features = [torch.from_numpy(f).unsqueeze(1).float() for f in features]
         
         return subcloud, sublabels, features
+
+
+class ConcatPointClouds(torch.utils.data.ConcatDataset):
+    """Fuse together multiple `~MyPointCloud` point cloud datasets."""
+    def __init__(self, datasets):
+        super().__init__(datasets)
+    
+    def get_sample(self, size=1000):
+        dataset_idx = np.random.choice(len(self.datasets))
+        return self.datasets[dataset_idx].get_sample(size)
