@@ -1,6 +1,7 @@
-from loader import load_point_cloud, cross_val
-from features_computation import compute_covariance_features, shape_distributions
-from subsampler import get_even_number
+from utils.loader import load_point_cloud, cross_val
+from utils.features_computation import compute_covariance_features, shape_distributions
+from utils.subsampler import get_even_number
+from sklearn.metrics import accuracy_score
 import os, math
 import numpy as np 
 import xgboost as xgb
@@ -74,16 +75,22 @@ if __name__ == '__main__':
         indices = val_label > 0
         new_val_cloud = val_cloud[indices]
         new_val_label = val_label[indices]
-        verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(new_val_cloud,val_cloud,tree,radius=RADIUS_COV)
-        A1, A2, A3, A4, D3, _ = shape_distributions(new_val_cloud,val_cloud,tree,RADIUS_SHAPE,PULLS,BINS)
-        features_test_cov = np.vstack((verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature)).T
-        features_test_shape = np.vstack((A1, A2, A3, A4, D3)).T
-        features_test = np.append(features_test_cov, features_test_shape,axis=1)
-        val_score = classifier.score(features_test,new_val_label)
+        #Ram friendly evaluation
+        labels_predicted = []
+        n_split = len(new_val_cloud)//100
+        for i in range(n_split+1):
+            local_val_cloud = new_val_cloud[i*100:min((i+1)*100,len(new_val_cloud))]
+            verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(local_val_cloud,val_cloud,tree,radius=RADIUS_COV)
+            A1, A2, A3, A4, D3, _ = shape_distributions(local_val_cloud,val_cloud,tree,RADIUS_SHAPE,PULLS,BINS)
+            features_test_cov = np.vstack((verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature)).T
+            features_test_shape = np.vstack((A1, A2, A3, A4, D3)).T
+            features_test = np.append(features_test_cov, features_test_shape,axis=1)
+            labels_predicted += list(classifier.predict(features_test))
+        val_score = accuracy_score(new_val_label,labels_predicted)
         print('Validation accuracy : ' +str(val_score))
         for i in range(1,len(CLASSES)):
             indices = new_val_label == i
-            local_val_score = classifier.score(features_test[indices],new_val_label[indices])
+            local_val_score = accuracy_score(labels_predicted[indices],new_val_label[indices])
             if math.isnan(local_val_score):
                 continue
             print('Validation accuracy for label ' + CLASSES[i] +' : '  +str(local_val_score))

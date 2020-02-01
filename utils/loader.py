@@ -1,5 +1,4 @@
 import open3d as o3d 
-from features_computation import compute_covariance_features
 import numpy as np 
 from copy import copy
 from plyfile import PlyData, PlyElement
