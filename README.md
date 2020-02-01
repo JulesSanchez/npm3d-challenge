@@ -10,3 +10,8 @@ data/MiniChallenge
 
 The `0` label corresponds to `Unclassified` data points in the point clouds.
 
+## Feature computations
+
+```
+python setup.py build_ext -i
+```
