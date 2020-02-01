@@ -25,7 +25,7 @@ if __name__ == '__main__':
     best_score = 0
     best_classifier = 0
 
-    for k in range(len(data_cross_val)):
+    for k in range(len(data_cross_val) - 1):
         # assemble training point cloud data
         data_local = data_cross_val[k]
         train_cloud1, train_label1, tree1 = load_point_cloud(os.path.join(PATH,data_local['training'][0])+EXTENSION)
@@ -64,7 +64,6 @@ if __name__ == '__main__':
         features_2 = np.append(features_2_cov, features_2_shape,axis=1)
         
         features = np.append(features_1,features_2,axis=0)
-        print(features.shape)
         labels = np.append(new_train_label1,new_train_label2,axis=0)
 
         classifier = xgb.XGBClassifier()
@@ -105,7 +104,6 @@ if __name__ == '__main__':
         if val_score > best_score:
             best_classifier = k
             best_score = val_score
-        break
     
     pickle.dump(classifiers[best_classifier], open(str(SIZE/1000) + 'Kclassifier.pickle','wb'))
 
