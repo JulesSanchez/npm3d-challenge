@@ -9,8 +9,10 @@ import tqdm
 from utils.loader import MyPointCloud, ConcatPointClouds
 from sklearn.metrics import accuracy_score
 
+SAMPLING_SIZE = 2000
 
-def train(model: Net, optim: torch.optim.Optimizer, criterion, dataset: MyPointCloud):
+
+def train(model: Net, optim: torch.optim.Optimizer, criterion, dataset):
     """Training loop.
     
     At every epoch, we draw a sub-sample from the dataset
@@ -18,13 +20,13 @@ def train(model: Net, optim: torch.optim.Optimizer, criterion, dataset: MyPointC
     """
     model.train()
     
-    points, labels, features = dataset.get_sample(size=1600)
+    points, labels, features = dataset.get_sample(size=SAMPLING_SIZE)
     
     optim.zero_grad()
     
     # get feature vector
-    x = torch.cat(features, dim=1)
-    output = model(x)
+    x = torch.cat(features, 1)
+    output = model(points, x)
     loss = criterion(output, labels)
     loss.backward()
     
@@ -37,13 +39,13 @@ def train(model: Net, optim: torch.optim.Optimizer, criterion, dataset: MyPointC
     print("Train loss: %.3e. Train accuracy: %.2f" % (loss, 100*accuracy))
     
 
-def validate(model: Net, criterion, val_dataset: MyPointCloud):
+def validate(model: Net, criterion, val_dataset):
     model.eval()
-    points, labels, features = val_dataset.get_sample(size=1600)
+    points, labels, features = val_dataset.get_sample(size=SAMPLING_SIZE)
     with torch.no_grad():
         # get feature vector
-        x = torch.cat(features, dim=1)
-        output = model(x)
+        x = torch.cat(features, 1)
+        output = model(points, x)
         loss = criterion(output, labels)
 
         prediction = np.argmax(output.data.numpy(), axis=1)
@@ -61,6 +63,7 @@ def save_checkpoint(epoch, model: nn.Module, optimizer, loss, path):
 
 
 NUM_EPOCHS = 80
+VALID_EVERY = 5
 
 
 if __name__ == "__main__":
@@ -69,15 +72,15 @@ if __name__ == "__main__":
     train_dataset = ConcatPointClouds([dataset1, dataset2])
     val_dataset = MyPointCloud("data/MiniChallenge/training/MiniLille2.ply")
     # import ipdb; ipdb.set_trace()
-    model = Net(9)
-    optimizer = optim.SGD(model.parameters(), lr=0.04, momentum=.8)
+    num_features = 9 + 3
+    model = Net(num_features)
+    optimizer = optim.SGD(model.parameters(), lr=0.06, momentum=.8)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
     criterion = torch.nn.NLLLoss()
     
-    VALID_EVERY = 5
 
     for epoch in tqdm.tqdm(range(NUM_EPOCHS)):
-        print("Epoch %d:", end=' ')
+        print("Epoch %d:" % epoch, end=' ')
         train(model, optimizer, criterion, train_dataset)
         
 

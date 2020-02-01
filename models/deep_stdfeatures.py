@@ -15,6 +15,7 @@ class Net(nn.Module):
         super().__init__()
         OUT_SIZE = 7
         
+        self.batchnorm = nn.BatchNorm1d(3)
         self.lin1 = nn.Sequential(
             nn.Linear(input_size, hidden_size),
             nn.LeakyReLU()
@@ -23,9 +24,11 @@ class Net(nn.Module):
         self.out = nn.LogSoftmax(dim=1)  # this works with NLLLoss
         
 
-    def forward(self, x: Tensor):
-        x = self.lin1(x)
-        x = self.lin2(x)
-        y = self.out(x)
+    def forward(self, points: Tensor, x: Tensor):
+        points = self.batchnorm(points)
+        z = torch.cat((points, x), 1)
+        z = self.lin1(z)
+        z = self.lin2(z)
+        y = self.out(z)
         return y
 
