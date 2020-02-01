@@ -20,13 +20,14 @@ if __name__ == '__main__':
     best_classifier = None
 
     for k in range(len(data_cross_val)):
-
+        # assemble training point cloud data
         data_local = data_cross_val[k]
         train_cloud1, train_label1, tree1 = load_point_cloud(os.path.join(PATH,data_local['training'][0])+EXTENSION)
         train_cloud2, train_label2, tree2 = load_point_cloud(os.path.join(PATH,data_local['training'][1])+EXTENSION)
         new_train_cloud1, new_train_label1 = get_even_number(train_cloud1,train_label1,SIZE)
         new_train_cloud2, new_train_label2 = get_even_number(train_cloud2,train_label2,SIZE)
 
+        # compute features
         verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(new_train_cloud1,train_cloud1,tree1,radius=RADIUS)
         features_1 = np.vstack((verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature)).T
         verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(new_train_cloud2,train_cloud2,tree2,radius=RADIUS)
