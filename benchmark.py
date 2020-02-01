@@ -78,6 +78,7 @@ if __name__ == '__main__':
         #Ram friendly evaluation
         labels_predicted = []
         n_split = len(new_val_cloud)//100
+        t1 = time.time()
         for i in range(n_split+1):
             local_val_cloud = new_val_cloud[i*100:min((i+1)*100,len(new_val_cloud))]
             verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(local_val_cloud,val_cloud,tree,radius=RADIUS_COV)
@@ -86,7 +87,9 @@ if __name__ == '__main__':
             features_test_shape = np.vstack((A1, A2, A3, A4, D3)).T
             features_test = np.append(features_test_cov, features_test_shape,axis=1)
             labels_predicted += list(classifier.predict(features_test))
+        labels_predicted = np.array(labels_predicted)
         val_score = accuracy_score(new_val_label,labels_predicted)
+        print('Time to score on ' +data_local['val'][0] + ' : ' + str(time.time() - t1) )
         print('Validation accuracy : ' +str(val_score))
         for i in range(1,len(CLASSES)):
             indices = new_val_label == i
@@ -94,7 +97,9 @@ if __name__ == '__main__':
             if math.isnan(local_val_score):
                 continue
             print('Validation accuracy for label ' + CLASSES[i] +' : '  +str(local_val_score))
-
+        pickle.dump(labels_predicted, open('labels_predicted.pickle','wb'))
+        pickle.dump(val_cloud, open('val_cloud.pickle','wb'))
+        
 
         classifiers.append(classifier)
         if val_score > best_score:
