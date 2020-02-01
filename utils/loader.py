@@ -35,7 +35,7 @@ def load_point_cloud(name,down_sample=False):
     if down_sample:
         downpcd = pcd.voxel_down_sample(voxel_size=down_sample)
     pcd_tree = o3d.geometry.KDTreeFlann(pcd)
-    return np.asarray(pcd.points), plydata.elements[0].data['class'], pcd_tree
+    return np.asarray(pcd.points), np.asarray(plydata.elements[0].data['class']), pcd_tree
 
 def cross_val():
     folds = []
