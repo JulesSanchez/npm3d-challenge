@@ -2,7 +2,6 @@
 import numpy as np
 # Import functions from scikit-learn
 from sklearn.neighbors import KDTree
-from physt import h1, h2, histogramdd
 import time 
 EPSILON = 1e-10 
 

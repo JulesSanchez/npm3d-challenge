@@ -7,3 +7,6 @@ data/MiniChallenge
 - training
 - test
 ```
+
+The `0` label corresponds to `Unclassified` data points in the point clouds.
+
