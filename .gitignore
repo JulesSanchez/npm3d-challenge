@@ -2,3 +2,8 @@ data/*
 *.pyc
 *.pickle
 checkpoints/
+*.so
+*.dll
+*.c
+*.o
+*.html

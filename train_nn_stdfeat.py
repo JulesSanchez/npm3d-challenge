@@ -76,7 +76,7 @@ if __name__ == "__main__":
     
     VALID_EVERY = 5
 
-    for epoch in tqdm.trange(NUM_EPOCHS):
+    for epoch in tqdm.tqdm(range(NUM_EPOCHS)):
         print("Epoch %d:", end=' ')
         train(model, optimizer, criterion, train_dataset)
         
