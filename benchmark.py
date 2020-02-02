@@ -12,6 +12,7 @@ PATH_TEST = 'data/MiniChallenge/test'
 EXTENSION = '.ply'
 SIZE = 1000
 RADIUS_COV = 0.5
+MULTISCALE = [0.2,0.5,1,1.5]
 RADIUS_SHAPE = 1.5
 BINS = 10
 PULLS = 255
@@ -38,29 +39,33 @@ if __name__ == '__main__':
         print('Time to subsample ' +data_local['training'][1] + ' : ' + str(time.time() - t1) )
 
         t1 = time.time()
-
-        verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(new_train_cloud1,train_cloud1,tree1,radius=RADIUS_COV)
+        features_1_cov = np.empty((len(new_train_cloud1),0),float)
+        for radi in MULTISCALE:
+            verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(new_train_cloud1,train_cloud1,tree1,radius=radi)
+            features_1_cov_local = np.vstack((verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature)).T
+            features_1_cov = np.append(features_1_cov,features_1_cov_local,axis=1)
         print('Time to compute Cov Features for ' +data_local['training'][0] + ' : ' + str(time.time() - t1) )
-
         print('Cov Features 1 computed')
         t1 = time.time()
         A1, A2, A3, A4, D3, BINS = shape_distributions(new_train_cloud1,train_cloud1,tree1,RADIUS_SHAPE,PULLS,BINS)
+        features_1_shape = np.vstack((A1, A2, A3, A4, D3)).T
         print('Time to compute Shape Features for ' +data_local['training'][0] + ' : ' + str(time.time() - t1) )
         print('Shape Features 1 computed')
-        features_1_cov = np.vstack((verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature)).T
-        features_1_shape = np.vstack((A1, A2, A3, A4, D3)).T
         features_1 = np.append(features_1_cov, features_1_shape,axis=1)
         
         t1 = time.time()
-        verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(new_train_cloud2,train_cloud2,tree2,radius=RADIUS_COV)
+        features_2_cov = np.empty((len(new_train_cloud2),0),float)
+        for radi in MULTISCALE:
+            verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(new_train_cloud2,train_cloud2,tree2,radius=radi)
+            features_2_cov_local = np.vstack((verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature)).T
+            features_2_cov = np.append(features_2_cov,features_2_cov_local,axis=1)
         print('Time to compute Cov Features for ' +data_local['training'][1] + ' : ' + str(time.time() - t1) )
         print('Cov Features 2 computed')
         t1 = time.time()
         A1, A2, A3, A4, D3, _ = shape_distributions(new_train_cloud2,train_cloud2,tree2,RADIUS_SHAPE,PULLS,BINS)
+        features_2_shape = np.vstack((A1, A2, A3, A4, D3)).T
         print('Time to compute Shape Features for ' +data_local['training'][1] + ' : ' + str(time.time() - t1) )
         print('Shape Features 2 computed')
-        features_2_cov = np.vstack((verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature)).T
-        features_2_shape = np.vstack((A1, A2, A3, A4, D3)).T
         features_2 = np.append(features_2_cov, features_2_shape,axis=1)
         
         features = np.append(features_1,features_2,axis=0)
@@ -80,9 +85,12 @@ if __name__ == '__main__':
         t1 = time.time()
         for i in range(n_split+1):
             local_val_cloud = new_val_cloud[i*100:min((i+1)*100,len(new_val_cloud))]
-            verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(local_val_cloud,val_cloud,tree,radius=RADIUS_COV)
+            features_test_cov = np.empty((len(local_val_cloud),0),float)
+            for radi in MULTISCALE:
+                verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(local_val_cloud,val_cloud,tree,radius=radi)
+                features_test_cov_local = np.vstack((verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature)).T
+                features_test_cov = np.append(features_test_cov,features_test_cov_local,axis=1)
             A1, A2, A3, A4, D3, _ = shape_distributions(local_val_cloud,val_cloud,tree,RADIUS_SHAPE,PULLS,BINS)
-            features_test_cov = np.vstack((verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature)).T
             features_test_shape = np.vstack((A1, A2, A3, A4, D3)).T
             features_test = np.append(features_test_cov, features_test_shape,axis=1)
             labels_predicted += list(classifier.predict(features_test))
@@ -96,14 +104,11 @@ if __name__ == '__main__':
             if math.isnan(local_val_score):
                 continue
             print('Validation accuracy for label ' + CLASSES[i] +' : '  +str(local_val_score))
-        pickle.dump(labels_predicted, open('labels_predicted.pickle','wb'))
-        pickle.dump(val_cloud, open('val_cloud.pickle','wb'))
-        
 
         classifiers.append(classifier)
         if val_score > best_score:
             best_classifier = k
             best_score = val_score
     
-    pickle.dump(classifiers[best_classifier], open(str(SIZE/1000) + 'Kclassifier.pickle','wb'))
+    pickle.dump(classifiers[best_classifier], open(str(SIZE//1000) + 'Kclassifier.pickle','wb'))
 
