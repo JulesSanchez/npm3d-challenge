@@ -66,11 +66,17 @@ VALID_EVERY = 4
 
 
 if __name__ == "__main__":
-    dataset1 = MyPointCloud("data/MiniChallenge/training/MiniLille1.ply")
-    dataset2 = MyPointCloud("data/MiniChallenge/training/MiniParis1.ply")
+    SCALES = [.2, .5]
+    dataset1 = MyPointCloud("data/MiniChallenge/training/MiniLille1.ply",
+                            multiscale=SCALES)
+    dataset2 = MyPointCloud("data/MiniChallenge/training/MiniParis1.ply",
+                            multiscale=SCALES)
+    print("Train dataset feature scales: %s" % SCALES)
     train_dataset = ConcatPointClouds([dataset1, dataset2])
-    val_dataset = MyPointCloud("data/MiniChallenge/training/MiniLille2.ply")
-    num_features = 9
+    print("Train dataset proportions:", train_dataset.proportions)
+    val_dataset = MyPointCloud("data/MiniChallenge/training/MiniLille2.ply",
+                               multiscale=SCALES)
+    num_features = 9 * len(SCALES)
     model = Net(num_features + 3)
     optimizer = optim.SGD(model.parameters(), lr=0.06, momentum=.8)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
@@ -103,16 +109,20 @@ if __name__ == "__main__":
     
     import matplotlib.pyplot as plt
     
+    plt.style.use("seaborn")
+    
     # import ipdb; ipdb.set_trace()
     fig = plt.figure(figsize=(8, 6))
     plt.subplot(211)
-    plt.plot(np.arange(NUM_EPOCHS), losses_, lw=1, label="train_loss")
-    plt.plot(np.linspace(0, NUM_EPOCHS, len(val_losses_)), val_losses_, lw=1, label="val_loss")
+    plt.plot(np.arange(NUM_EPOCHS), losses_, lw=1, label="train_loss", marker='+')
+    plt.plot(np.linspace(0, NUM_EPOCHS, len(val_losses_)), val_losses_, lw=1, marker='+', label="val_loss")
     plt.legend()
+    plt.grid()
     
     plt.subplot(212)
-    plt.plot(np.arange(NUM_EPOCHS), accuracies_, lw=1, label="train_acc")
-    plt.plot(np.linspace(0, NUM_EPOCHS, len(val_losses_)), val_accuracies_, lw=1, label="val_acc")
+    plt.plot(np.arange(NUM_EPOCHS), accuracies_, lw=1, marker='+', label="train_acc")
+    plt.plot(np.linspace(0, NUM_EPOCHS, len(val_losses_)), val_accuracies_, lw=1, marker='+', label="val_acc")
     plt.legend()
+    plt.grid()
 
     plt.show()
