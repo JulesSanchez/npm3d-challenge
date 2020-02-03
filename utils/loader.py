@@ -17,6 +17,8 @@ CLASSES = ['Unclassified', 'Ground', 'Building',
            'Poles', 'Pedestrians', 'Cars', 'Vegetation']
 
 def preprocess(name,path_output=False,voxel_size = 0.5, labels = True):
+    #path_output should not have an extension
+    #name need an extension
     plydata = PlyData.read(name)
     pcd = o3d.io.read_point_cloud(name)
     if labels :
@@ -27,10 +29,26 @@ def preprocess(name,path_output=False,voxel_size = 0.5, labels = True):
         downpcd = pcd.voxel_down_sample(voxel_size=voxel_size)
         downpcd.colors = o3d.utility.Vector3dVector(np.round(downpcd.colors*max_label))
         labels = np.asarray(downpcd.colors)[:,0]
+        print('Number of points inside the downsampled point cloud : ' + len(labels))
+        if path_output:
+            o3d.io.write_point_cloud(path_output+'.ply',downpcd)
+            np.savetxt(path_output+'.txt',labels.astype(int),delimiter='\n',fmt='%i')
         return np.asarray(downpcd.points), np.asarray(downpcd.colors)
     else:
         downpcd = pcd.voxel_down_sample(voxel_size=voxel_size)
+        if path_output:
+            o3d.io.write_point_cloud(path_output+'.ply',downpcd)
         return np.asarray(downpcd.points), None
+
+def load_downsampled_point_cloud(path_output):
+    #path_output should not have an extension
+    point_cloud, tree = load_point_cloud(path_output+'.ply')
+    try:
+        labels = np.loadtxt(path_output+'.txt')
+        return point_cloud, labels, tree
+    except:
+        return point_cloud, tree
+
 
 def load_point_cloud(name,down_sample=False):
     """Load the point cloud.
