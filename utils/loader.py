@@ -16,6 +16,21 @@ NAMETEST = ['MiniDijon9']
 CLASSES = ['Unclassified', 'Ground', 'Building',
            'Poles', 'Pedestrians', 'Cars', 'Vegetation']
 
+def preprocess(name,path_output=False,voxel_size = 0.5, labels = True):
+    plydata = PlyData.read(name)
+    pcd = o3d.io.read_point_cloud(name)
+    if labels :
+        labels = np.asarray(plydata.elements[0].data['class']).astype(np.float32)
+        max_label = np.max(labels)
+        labels /= max_label
+        pcd.colors = o3d.utility.Vector3dVector(np.ones(shape=(labels.shape[0],3))*labels[:,None])
+        downpcd = pcd.voxel_down_sample(voxel_size=voxel_size)
+        downpcd.colors = o3d.utility.Vector3dVector(np.round(downpcd.colors*max_label))
+        labels = np.asarray(downpcd.colors)[:,0]
+        return np.asarray(downpcd.points), np.asarray(downpcd.colors)
+    else:
+        downpcd = pcd.voxel_down_sample(voxel_size=voxel_size)
+        return np.asarray(downpcd.points), None
 
 def load_point_cloud(name,down_sample=False):
     """Load the point cloud.

@@ -7,3 +7,4 @@ checkpoints/
 *.c
 *.o
 *.html
+test.py
