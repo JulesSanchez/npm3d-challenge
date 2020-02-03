@@ -22,14 +22,17 @@ def preprocess(name,path_output=False,voxel_size = 0.5, labels = True):
     plydata = PlyData.read(name)
     pcd = o3d.io.read_point_cloud(name)
     if labels :
-        labels = np.asarray(plydata.elements[0].data['class']).astype(np.float32)
+        labels = np.asarray(plydata.elements[0].data['class'])
+        indices = labels > 0
+        labels = labels[indices].astype(np.float32)
+        pcd.points = o3d.utility.Vector3dVector(np.asarray(pcd.points)[indices])
         max_label = np.max(labels)
         labels /= max_label
         pcd.colors = o3d.utility.Vector3dVector(np.ones(shape=(labels.shape[0],3))*labels[:,None])
         downpcd = pcd.voxel_down_sample(voxel_size=voxel_size)
         downpcd.colors = o3d.utility.Vector3dVector(np.round(downpcd.colors*max_label))
         labels = np.asarray(downpcd.colors)[:,0]
-        print('Number of points inside the downsampled point cloud : ' + len(labels))
+        print('Number of points inside the downsampled point cloud : ' + str(len(labels)))
         if path_output:
             o3d.io.write_point_cloud(path_output+'.ply',downpcd)
             np.savetxt(path_output+'.txt',labels.astype(int),delimiter='\n',fmt='%i')
