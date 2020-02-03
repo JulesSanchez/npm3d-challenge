@@ -66,21 +66,26 @@ def write_results(path, labels):
 
 
 class MyPointCloud(Dataset):
-    """Basic point cloud dataset."""
-    def __init__(self, filepath: str):
+    """Basic point cloud Dataset structure.
+    
+    Includes a method to subsample and compute features on-the-fly."""
+    def __init__(self, filepath: str, radius: float = 0.5, multiscale=None):
         super().__init__()
         points, labels, tree = load_point_cloud(filepath)
         self.points = points
         self.labels = labels
         self.tree = tree
+        self.radius = radius
+        self.multiscale = multiscale
     
     def __len__(self):
         return len(self.points)
     
     
     def __getitem__(self, idx: int):
-        """Use `~MyCloudSampler` as a sampler inside of your
-        DataLoader instance instead."""
+        """Allows to index into the point cloud.
+        
+        Use the `get_sample` method inside of your training loop instead instead."""
         if torch.is_tensor(idx):
             idx = idx.tolist()
         
@@ -94,8 +99,17 @@ class MyPointCloud(Dataset):
         subcloud, sublabels = get_even_number(
             self.points, self.labels, size)
 
-        features = compute_covariance_features(
-            subcloud, self.points, self.tree, radius=RADIUS)
+        # loop over the multi-scale radii
+        if self.multiscale is not None:
+            features = []
+            for r in self.multiscale:
+                features += compute_covariance_features(
+                    subcloud, self.points, self.tree, radius=r)
+        else:
+            # use radius param
+            features = compute_covariance_features(
+                subcloud, self.points, self.tree, radius=self.radius)
+
         
         subcloud = torch.from_numpy(subcloud).float()
         sublabels = torch.from_numpy(sublabels).long()
@@ -105,10 +119,16 @@ class MyPointCloud(Dataset):
 
 
 class ConcatPointClouds(torch.utils.data.ConcatDataset):
-    """Fuse together multiple `~MyPointCloud` point cloud datasets."""
+    """Fuse together multiple `~MyPointCloud` point cloud datasets.
+    
+    The `get_sample` method samples randomly from either one or the other datasets."""
     def __init__(self, datasets):
         super().__init__(datasets)
     
+    @property
+    def proportions(self):
+        return np.array([len(d) for d in self.datasets]) / len(self)
+    
     def get_sample(self, size=1000):
-        dataset_idx = np.random.choice(len(self.datasets))
+        dataset_idx = np.random.choice(len(self.datasets), p=self.proportions)
         return self.datasets[dataset_idx].get_sample(size)

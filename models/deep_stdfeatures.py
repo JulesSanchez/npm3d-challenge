@@ -15,7 +15,7 @@ class Net(nn.Module):
         super().__init__()
         OUT_SIZE = 7
         
-        self.batchnorm = nn.BatchNorm1d(3)
+        self.batchnorm = nn.BatchNorm1d(3, track_running_stats=False, affine=False)
         self.lin1 = nn.Sequential(
             nn.Linear(input_size, hidden_size),
             nn.ReLU(),
