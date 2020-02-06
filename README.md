@@ -21,6 +21,15 @@ python setup.py build_ext -i
 
 We use this implementation of PointNet++ in PyTorch: https://github.com/erikwijmans/Pointnet2_PyTorch
 
+## GCO
+
+
+We use "".
+Grab the code:
+```bash
+wget http://mouse.cs.uwaterloo.ca/code/gco-v3.0.zip
+```
+
 
 ## References
 

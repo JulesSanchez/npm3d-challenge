@@ -11,4 +11,5 @@ checkpoints/
 *.html
 test.py
 
+gco/src
 Pointnet2_PyTorch
