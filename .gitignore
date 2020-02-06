@@ -1,3 +1,5 @@
+.vscode
+
 data/*
 *.pyc
 *.pickle
@@ -8,3 +10,5 @@ checkpoints/
 *.o
 *.html
 test.py
+
+Pointnet2_PyTorch

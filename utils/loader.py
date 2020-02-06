@@ -171,3 +171,45 @@ class ConcatPointClouds(torch.utils.data.ConcatDataset):
     def get_sample(self, size=1000):
         dataset_idx = np.random.choice(len(self.datasets), p=self.proportions)
         return self.datasets[dataset_idx].get_sample(size)
+
+
+class VoxelizedPointCloud(Dataset):
+    """Use as input for PointNet."""
+    def __init__(self, filepath: str):
+        receive = load_downsampled_point_cloud(filepath)
+        if len(receive) == 3:
+            self.points, self.labels, self._tree = receive
+        else:
+            self.points, self._tree = receive
+            self.labels = None
+        
+    def __getitem__(self, idx: int):
+        poi = torch.from_numpy(self.points[idx]).float()
+        if self.labels is not None:
+            lab = self.labels[idx]
+            if isinstance(lab, np.ndarray):
+                lab = torch.from_numpy(lab).long()
+            return poi, lab
+        return poi
+
+    def get(self):
+        if self.labels is not None:
+            return torch.from_numpy(self.points).float(), torch.from_numpy(self.labels).long()
+        else:
+            return torch.from_numpy(self.points).float()
+
+
+class ConcatVoxelizedPointCloud(torch.utils.data.ConcatDataset):
+    def __init__(self, datasets):
+        super().__init__(datasets)
+
+    @property
+    def proportions(self):
+        return np.array([len(d) for d in self.datasets]) / len(self)
+
+    def get(self, size=1000):
+        dataset_idx = np.random.choice(len(self.datasets), p=self.proportions)
+        d: VoxelizedPointCloud = self.datasets[dataset_idx]
+        return d.get()
+
+
