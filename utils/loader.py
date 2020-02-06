@@ -95,8 +95,11 @@ def cross_val():
     return folds
 
 
-def write_results(path, labels):
-    np.savetxt(path+NAMETEST[0]+'_labels.txt',labels.astype(int),delimiter='\n',fmt='%i')
+def write_results(path, labels,test=True):
+    if test:
+        np.savetxt(path+NAMETEST[0]+'_labels.txt',labels.astype(int),fmt='%i')
+    else:
+        np.savetxt(path+'_labels.txt',np.array(labels).astype(int),fmt='%i')
     return 
 
 

@@ -12,12 +12,12 @@ PATH_TEST = 'data/MiniChallenge/test'
 EXTENSION = '.ply'
 SIZE = 1000
 RADIUS_COV = 0.5
-MULTISCALE = [0.2,0.5,1,1.5]
+MULTISCALE = [RADIUS_COV]# [0.2,0.5,1,1.5]
 RADIUS_SHAPE = 1.5
 BINS = 10
 PULLS = 255
 CLASSES = ['Unclassified','Ground','Building','Poles','Pedestrians','Cars','Vegetation']
-MODEL_SELECTION = False 
+MODEL_SELECTION = True 
 import time 
 
 if __name__ == '__main__':
@@ -73,7 +73,7 @@ if __name__ == '__main__':
             features = np.append(features_1,features_2,axis=0)
             labels = np.append(new_train_label1,new_train_label2,axis=0)
 
-            classifier = xgb.XGBClassifier()
+            classifier = xgb.XGBClassifier(objective='multi:softprob')
             classifier.fit(features,labels)
             print('Training accuracy : ' +str(classifier.score(features,labels)))
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
             new_val_cloud = val_cloud[indices]
             new_val_label = val_label[indices]
             #Ram friendly evaluation
-            labels_predicted = []
+            soft_labels = []
             n_split = len(new_val_cloud)//100
             t1 = time.time()
             for i in range(n_split+1):
@@ -95,8 +95,8 @@ if __name__ == '__main__':
                 A1, A2, A3, A4, D3, _ = shape_distributions(local_val_cloud,val_cloud,tree,RADIUS_SHAPE,PULLS,BINS)
                 features_test_shape = np.vstack((A1, A2, A3, A4, D3)).T
                 features_test = np.append(features_test_cov, features_test_shape,axis=1)
-                labels_predicted += list(classifier.predict(features_test))
-            labels_predicted = np.array(labels_predicted)
+                soft_labels += list(classifier.predict_proba(features_test))
+            labels_predicted = np.argmax(np.array(soft_labels),axis=0)
             val_score = accuracy_score(new_val_label,labels_predicted)
             print('Time to score on ' +data_local['val'][0] + ' : ' + str(time.time() - t1) )
             print('Validation accuracy : ' +str(val_score))
@@ -106,12 +106,12 @@ if __name__ == '__main__':
                 if math.isnan(local_val_score):
                     continue
                 print('Validation accuracy for label ' + CLASSES[i] +' : '  +str(local_val_score))
-
+            write_results(os.path.join(PATH,data_local['val'][0]),soft_labels)
+            break
             classifiers.append(classifier)
             if val_score > best_score:
                 best_classifier = k
                 best_score = val_score
-        
         pickle.dump(classifiers[best_classifier], open(str(SIZE//1000) + 'Kclassifier.pickle','wb'))
     
     else :
