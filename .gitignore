@@ -12,4 +12,5 @@ checkpoints/
 test.py
 
 gco/src
+gco/build
 Pointnet2_PyTorch
