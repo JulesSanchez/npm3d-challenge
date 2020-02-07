@@ -1,8 +1,9 @@
 .vscode
 
+*.pickle
+*.txt
 data/*
 *.pyc
-*.pickle
 checkpoints/
 *.so
 *.dll
@@ -10,7 +11,7 @@ checkpoints/
 *.o
 *.html
 test.py
-
+*.npy
 gco/src
 gco/build
 Pointnet2_PyTorch
