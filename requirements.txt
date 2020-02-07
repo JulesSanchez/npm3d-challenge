@@ -1,4 +1,10 @@
 numpy
+numba
 open3d
 plyfile
 pytorch>=1.4.0
+hyperopt
+xgboost
+giotto-tda
+pickle
+scikit-learn

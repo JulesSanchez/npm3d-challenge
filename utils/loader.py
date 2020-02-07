@@ -83,6 +83,15 @@ def load_point_cloud(name,down_sample=False):
 
 
 def cross_val():
+    """
+    Separate the data between training, val, and test point clouds.
+    
+    Returns
+    -------
+    folds : dict
+        Keys: training: paths for the training files, val: paths to the validation files,
+        test: path to the test file
+    """
     folds = []
     for k in range(len(NAMEFILES)):
         dic = {}
