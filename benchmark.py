@@ -96,7 +96,8 @@ if __name__ == '__main__':
                 features_test_shape = np.vstack((A1, A2, A3, A4, D3)).T
                 features_test = np.append(features_test_cov, features_test_shape,axis=1)
                 soft_labels += list(classifier.predict_proba(features_test))
-            labels_predicted = np.argmax(np.array(soft_labels),axis=0)
+            soft_labels = np.array(soft_labels)
+            labels_predicted = np.argmax(soft_labels),axis=1)
             val_score = accuracy_score(new_val_label,labels_predicted)
             print('Time to score on ' +data_local['val'][0] + ' : ' + str(time.time() - t1) )
             print('Validation accuracy : ' +str(val_score))
