@@ -3,6 +3,7 @@ import networkx as nx
 from sklearn.neighbors import KDTree
 
 def make_graph(point_cloud,n=9):
+    """Create a k-nearest neighbor graph from the point cloud."""
     tree = KDTree(point_cloud)
     g = nx.Graph()
     g.add_nodes_from(list(range(len(point_cloud))))
@@ -15,5 +16,6 @@ def make_graph(point_cloud,n=9):
     return g.to_undirected()    
 
 def write_graph(graph,path):
+    """Dump the graph edges."""
     np.savetxt(path+'edges.txt',graph.edges(),fmt='%i')
     #np.savetxt(path+'nodes.txt',graph.nodes(),delimiter='\n',fmt='%i')

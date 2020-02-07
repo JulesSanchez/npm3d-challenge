@@ -32,9 +32,9 @@ int* AlphaExpansionOnApproximateGraph(int num_pixels, int num_labels, int num_ed
 			gc->setNeighbors(p1,p2);
 			}
 
-		printf("\nBefore optimization energy is %d",gc->compute_energy());
+		printf("\nBefore optimization energy is %lld", gc->compute_energy());
 		gc->expansion();
-		printf("\nAfter optimization energy is %d",gc->compute_energy());
+		printf("\nAfter optimization energy is %lld", gc->compute_energy());
 
 		for ( int  i = 0; i < num_pixels; i++ )
 			result[i] = gc->whatLabel(i);
@@ -111,7 +111,8 @@ int main(int argc, char **argv)
 	for(int i = 0; i<num_pixels;i++){
 		o<<result[i]+1<<"\n";
 	}
-	printf("\n  Finished %d (%d) clock per sec %d",clock()/CLOCKS_PER_SEC,clock(),CLOCKS_PER_SEC);
+	printf("\n  Finished %lld (%lld) clock per sec %lld",
+			clock()/CLOCKS_PER_SEC,clock(),CLOCKS_PER_SEC);
 
 	return 0;
 }
