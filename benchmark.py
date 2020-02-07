@@ -95,9 +95,10 @@ if __name__ == '__main__':
                 A1, A2, A3, A4, D3, _ = shape_distributions(local_val_cloud,val_cloud,tree,RADIUS_SHAPE,PULLS,BINS)
                 features_test_shape = np.vstack((A1, A2, A3, A4, D3)).T
                 features_test = np.append(features_test_cov, features_test_shape,axis=1)
-                soft_labels += list(classifier.predict_proba(features_test))
+                soft_labels = soft_labels + list(classifier.predict_proba(features_test))
             soft_labels = np.array(soft_labels)
-            labels_predicted = np.argmax(soft_labels),axis=1)
+            print(soft_labels.shape)
+            labels_predicted = np.argmax(soft_labels,axis=1) + 1
             val_score = accuracy_score(new_val_label,labels_predicted)
             print('Time to score on ' +data_local['val'][0] + ' : ' + str(time.time() - t1) )
             print('Validation accuracy : ' +str(val_score))
@@ -107,7 +108,7 @@ if __name__ == '__main__':
                 if math.isnan(local_val_score):
                     continue
                 print('Validation accuracy for label ' + CLASSES[i] +' : '  +str(local_val_score))
-            write_results(os.path.join(PATH,data_local['val'][0]),soft_labels)
+            write_results(os.path.join(PATH,data_local['val'][0]),soft_labels*100)
             break
             classifiers.append(classifier)
             if val_score > best_score:

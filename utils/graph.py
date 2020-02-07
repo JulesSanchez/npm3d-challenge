@@ -16,4 +16,4 @@ def make_graph(point_cloud,n=9):
 
 def write_graph(graph,path):
     np.savetxt(path+'edges.txt',graph.edges(),fmt='%i')
-    np.savetxt(path+'nodes.txt',graph.nodes(),delimiter='\n',fmt='%i')
+    #np.savetxt(path+'nodes.txt',graph.nodes(),delimiter='\n',fmt='%i')
