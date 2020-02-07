@@ -38,6 +38,10 @@ cd build/
 cmake ../
 make
 ```
+You can then check that the example file compiles:
+```bash
+./Example
+```
 
 
 ## References
