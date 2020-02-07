@@ -2,15 +2,28 @@
 import numpy as np
 # Import functions from scikit-learn
 from sklearn.neighbors import KDTree
-import time 
+import time
+import numba
 EPSILON = 1e-10 
 
+@numba.njit
 def tetrahedron_calc_volume(a, b, c, d):
-    test = np.abs(np.linalg.det(np.stack(((a-b).T , (b-c).T, (c-d).T)).T))/6
-    return test
+    n = a.shape[0]
+    mat = np.stack(((a-b).T, (b-c).T, (c-d).T)).T
+    out = np.zeros((n,))
+    
+    for i in range(n):
+        out[i] = np.abs(np.linalg.det(mat[i]))/6
+    # test = 
+    return out
 
-def area(a, b, c) :
-    return 0.5 * np.linalg.norm( np.cross( b-a, c-a ), axis=1 )
+@numba.njit
+def area(a, b, c):
+    n = a.shape[0]
+    out = np.zeros((n,))
+    for i in range(n):
+        out[i] = np.linalg.norm(np.cross(b[i]-a[i], c[i]-a[i]))
+    return 0.5 * out
 
 def get_angle(a, b, c):
     ba = a - b
@@ -20,15 +33,16 @@ def get_angle(a, b, c):
     angle = np.arccos(cosine_angle)
     return angle
 
+@numba.njit
 def adaptative_bin(samples,bins):
     total_number = len(samples)
     bin_s = [np.percentile(samples,i*10) for i in range(11)]
     return np.array(bin_s)
 
 
+@numba.jit
 def local_PCA(points):
-
-    barycenter = np.mean(points,axis=0)
+    barycenter = np.array([np.mean(points[:,i]) for i in range(3)])
     centered_points = points - barycenter
     M_cov = np.dot(centered_points.T,centered_points)/len(centered_points)
     eigenvalues, eigenvectors = np.linalg.eigh(M_cov)
@@ -120,4 +134,19 @@ def shape_distributions(query_points, cloud_points, tree, radius=2.5, pulls=255,
         A3 = np.array([np.histogram(A3[i],bins=bins[4])[0] for i in range(len(A3))]).T
 
     return D1, D2, D3, D4, A3, bins
+
+
+def tda_features(point_cloud: np.ndarray):
+    """Extract more features using Topological Data Analysis (TDA).
+    TODO: think about what features to use. Maybe work more locally?
+    """
+    import gtda.homology as hl
+    homology_dims = [0, 1]
+    peristence = hl.VietorisRipsPersistence(
+        metric="euclidean",
+        homology_dimensions=homology_dims
+    )
+    diagram = peristence.fit_transform(point_cloud)
+
+    pass
 
