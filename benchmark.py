@@ -18,7 +18,7 @@ BINS = 10
 PULLS = 255
 CLASSES = ['Unclassified','Ground','Building','Poles','Pedestrians','Cars','Vegetation']
 MODEL_SELECTION = False 
-COMPUTED = False
+COMPUTED = True
 PRECOMPUTED = False
 import time 
 
@@ -118,9 +118,9 @@ if __name__ == '__main__':
         pickle.dump(classifiers[best_classifier], open(str(SIZE//1000) + 'Kclassifier.pickle','wb'))
     
     else :
+        data_local = data_cross_val[0]
         if not COMPUTED:
             # assemble training point cloud data
-            data_local = data_cross_val[0]
             train_cloud1, train_label1, tree1 = load_point_cloud(os.path.join(PATH,data_local['training'][0])+EXTENSION)
             train_cloud2, train_label2, tree2 = load_point_cloud(os.path.join(PATH,data_local['training'][1])+EXTENSION)
             train_cloud3, train_label3, tree3 = load_point_cloud(os.path.join(PATH,data_local['val'][0])+EXTENSION)
@@ -173,7 +173,6 @@ if __name__ == '__main__':
             print('Shape Features 2 computed')
             features_3 = np.append(features_3_cov, features_3_shape,axis=1)
 
-
             features = np.append(features_1,features_2,axis=0)
             features = np.append(features,features_3,axis=0)
             labels = np.append(new_train_label1,new_train_label2,axis=0)
@@ -192,7 +191,7 @@ if __name__ == '__main__':
         n_split = len(test_cloud)//100
         t1 = time.time()
         if not PRECOMPUTED:
-            for i in range(n_split+1):
+            for i in range(780,n_split+1):
                 local_val_cloud = test_cloud[i*100:min((i+1)*100,len(test_cloud))]
                 features_test_cov = np.empty((len(local_val_cloud),0),float)
                 for radi in MULTISCALE:
