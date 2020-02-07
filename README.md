@@ -32,15 +32,14 @@ wget http://mouse.cs.uwaterloo.ca/code/gco-v3.0.zip
 
 We use CMake as a build system for the C++ code. Build the code:
 ```bash
-cd gco/
-mkdir build
+mkdir build/
 cd build/
-cmake ../
+cmake ../gco
 make
 ```
 You can then check that the example file compiles:
 ```bash
-./Example
+./build/Main
 ```
 
 

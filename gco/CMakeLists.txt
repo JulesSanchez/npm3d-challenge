@@ -16,5 +16,4 @@ set(SOURCES
 
 include_directories(src)
 
-add_executable(Main main.cpp)
-target_sources(Main PUBLIC ${SOURCES})
+add_executable(Main main.cpp ${SOURCES})
