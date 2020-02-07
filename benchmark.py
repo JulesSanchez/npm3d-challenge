@@ -12,12 +12,14 @@ PATH_TEST = 'data/MiniChallenge/test'
 EXTENSION = '.ply'
 SIZE = 1000
 RADIUS_COV = 0.5
-MULTISCALE = [RADIUS_COV]# [0.2,0.5,1,1.5]
+MULTISCALE = [0.2,0.5,1,1.5]
 RADIUS_SHAPE = 1.5
 BINS = 10
 PULLS = 255
 CLASSES = ['Unclassified','Ground','Building','Poles','Pedestrians','Cars','Vegetation']
-MODEL_SELECTION = True 
+MODEL_SELECTION = False 
+COMPUTED = False
+PRECOMPUTED = False
 import time 
 
 if __name__ == '__main__':
@@ -28,7 +30,7 @@ if __name__ == '__main__':
         best_score = 0
         best_classifier = 0
 
-        for k in range(len(data_cross_val) - 1):
+        for k in range(len(data_cross_val)):
             # assemble training point cloud data
             data_local = data_cross_val[k]
             train_cloud1, train_label1, tree1 = load_point_cloud(os.path.join(PATH,data_local['training'][0])+EXTENSION)
@@ -109,7 +111,6 @@ if __name__ == '__main__':
                     continue
                 print('Validation accuracy for label ' + CLASSES[i] +' : '  +str(local_val_score))
             write_results(os.path.join(PATH,data_local['val'][0]),soft_labels*100)
-            break
             classifiers.append(classifier)
             if val_score > best_score:
                 best_classifier = k
@@ -117,9 +118,9 @@ if __name__ == '__main__':
         pickle.dump(classifiers[best_classifier], open(str(SIZE//1000) + 'Kclassifier.pickle','wb'))
     
     else :
-        for k in range(len(data_cross_val) - 1):
+        if not COMPUTED:
             # assemble training point cloud data
-            data_local = data_cross_val[k]
+            data_local = data_cross_val[0]
             train_cloud1, train_label1, tree1 = load_point_cloud(os.path.join(PATH,data_local['training'][0])+EXTENSION)
             train_cloud2, train_label2, tree2 = load_point_cloud(os.path.join(PATH,data_local['training'][1])+EXTENSION)
             train_cloud3, train_label3, tree3 = load_point_cloud(os.path.join(PATH,data_local['val'][0])+EXTENSION)
@@ -181,13 +182,16 @@ if __name__ == '__main__':
             classifier = xgb.XGBClassifier()
             classifier.fit(features,labels)
             print('Training accuracy : ' +str(classifier.score(features,labels)))
+            classifier = pickle.dump(classifier,open('fullKclassifier.pickle','wb'))
+        else :
+            classifier = pickle.load(open('fullKclassifier.pickle','rb'))
 
-
-            test_cloud, tree = load_point_cloud(os.path.join(PATH_TEST,data_local['test'][0])+EXTENSION)
-            #Ram friendly evaluation
-            labels_predicted = []
-            n_split = len(test_cloud)//100
-            t1 = time.time()
+        test_cloud, tree = load_point_cloud(os.path.join(PATH_TEST,data_local['test'][0])+EXTENSION)
+        #Ram friendly evaluation
+        soft_labels = []
+        n_split = len(test_cloud)//100
+        t1 = time.time()
+        if not PRECOMPUTED:
             for i in range(n_split+1):
                 local_val_cloud = test_cloud[i*100:min((i+1)*100,len(test_cloud))]
                 features_test_cov = np.empty((len(local_val_cloud),0),float)
@@ -198,7 +202,14 @@ if __name__ == '__main__':
                 A1, A2, A3, A4, D3, _ = shape_distributions(local_val_cloud,test_cloud,tree,RADIUS_SHAPE,PULLS,BINS)
                 features_test_shape = np.vstack((A1, A2, A3, A4, D3)).T
                 features_test = np.append(features_test_cov, features_test_shape,axis=1)
-                labels_predicted += list(classifier.predict(features_test))
-            labels_predicted = np.array(labels_predicted)
-            write_results('results/',labels_predicted)
-            pickle.dump(classifier, open('fullKclassifier.pickle','wb'))
+                np.save('features/test_'+str(i)+'.npy',features_test)
+                #labels_predicted += list(classifier.predict(features_test))
+                soft_labels = soft_labels + list(classifier.predict_proba(features_test))
+        else :
+            for i in range(n_split+1):
+                feature_test = np.load('features/test_'+str(i)+'.npy')
+                soft_labels = soft_labels + list(classifier.predict_proba(features_test))
+        soft_labels = np.array(soft_labels)
+        #labels_predicted = np.array(labels_predicted)
+        write_results('results/',soft_labels*100)
+        pickle.dump(classifier, open('fullKclassifier.pickle','wb'))
