@@ -23,7 +23,7 @@ PULLS = 255
 MODEL_SELECTION = False
 
 # whether to load a XGB file checkpoint
-COMPUTED = True
+LOAD_TRAINED = False
 # whether the features were precomputed or not for the test dataset.
 TEST_FEATURES_PRECOMPUTED = False
 
@@ -73,8 +73,9 @@ def assemble_features(point_cloud: np.ndarray, subcloud: np.ndarray, tree, verbo
     return features
 
 
-if __name__ == '__main__':
-
+def main():
+    """Main loop: assemble training data subsamples, compute features,
+    run XGBoost, validate on every decimation of validation and test."""
     data_cross_val = cross_val()
     if MODEL_SELECTION:
         # Use cross validation for model selection
@@ -121,7 +122,7 @@ if __name__ == '__main__':
             for i in range(n_split+1):
                 sub_val_cloud = new_val_cloud[i*100:min((i+1)*100,len(new_val_cloud))]
                 sub_features = assemble_features(new_val_cloud, sub_val_cloud, val_tree)
-                soft_labels = soft_labels + list(classifier.predict_proba(features_test))
+                soft_labels = soft_labels + list(classifier.predict_proba(sub_features))
             soft_labels = np.array(soft_labels)
             print(soft_labels.shape)
             labels_predicted = np.argmax(soft_labels,axis=1) + 1
@@ -140,16 +141,14 @@ if __name__ == '__main__':
                 best_classifier = k
                 best_score = val_score
         pickle.dump(classifiers[best_classifier], open(str(SIZE//1000) + 'Kclassifier.pickle','wb'))
-    
     else:
-        # Do not cross validate, just take the first choice for model
         data_local = data_cross_val[0]
-        if not COMPUTED:
+        if not LOAD_TRAINED:
             # assemble training point cloud data
             feature_list_ = []
             label_list_ = []
 
-            for i, datafile in enumerate(data_local['training']):
+            for i, datafile in enumerate(data_local['training']+data_local['val']):
                 train_cloud, train_label, tree = load_point_cloud(
                     os.path.join(PATH_TRAIN, datafile+EXTENSION))
                 # subsample the point cloud and labels
@@ -172,7 +171,7 @@ if __name__ == '__main__':
             classifier.fit(features,labels)
             print('Training accuracy : ' +str(classifier.score(features,labels)))
             with open('fullKclassifier.pickle', 'wb') as f:
-                classifier = pickle.dump(classifier, f)
+                pickle.dump(classifier, f)
         else:
             with open('fullKclassifier.pickle','rb') as f:
                 classifier = pickle.load(f)
@@ -200,3 +199,7 @@ if __name__ == '__main__':
         write_results('results/',soft_labels*100)
         with open('fullKclassifier.pickle', 'wb') as f:
             pickle.dump(classifier, f)
+
+
+if __name__ == '__main__':
+    main()
