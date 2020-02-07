@@ -15,7 +15,18 @@ def make_graph(point_cloud,n=9):
             g.add_edge(k,i)
     return g.to_undirected()    
 
-def write_graph(graph,path):
-    """Dump the graph edges."""
-    np.savetxt(path+'edges.txt',graph.edges(),fmt='%i')
-    #np.savetxt(path+'nodes.txt',graph.nodes(),delimiter='\n',fmt='%i')
+def write_graph(graph: nx.Graph, labels, path):
+    """Dump the graph data to be postprocessesed (smoothed) using graph cut.
+    
+    Parameters
+    ----------
+    graph
+        KNN graph.
+    labels
+        Labels of the graph nodes.
+    path
+        Common path for both files.
+    """
+    np.savetxt(path+'edges.txt', graph.edges(),fmt='%i')
+    # save nodes file as list of integer labels (= unary potentials)
+    np.savetxt(path+'nodes.txt', np.asarray(labels).astype(int), delimiter='\n', fmt='%i')
