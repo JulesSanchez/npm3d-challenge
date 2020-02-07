@@ -8,7 +8,7 @@
 #include "src/GCoptimization.h"
 
 
-void GeneralGraph_DArraySArraySpatVarying(int num_pixels, int num_labels, int num_edges, int *probabilites, int *edges)
+int* AlphaExpansionOnApproximateGraph(int num_pixels, int num_labels, int num_edges, int *probabilites, int *edges)
 {
 	int *result = new int[num_pixels];   // stores result of optimization
 
@@ -45,14 +45,15 @@ void GeneralGraph_DArraySArraySpatVarying(int num_pixels, int num_labels, int nu
 		e.Report();
 	}
 
-	delete [] result;
 	delete [] smooth;
+	return result;
 
 }
 ////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char **argv)
 {
+	printf("\nOn est tipar");
 	long num_pixels = 0;
 	int num_labels = 6;
 	long num_edges = 0;
@@ -64,21 +65,23 @@ int main(int argc, char **argv)
 	{
 		num_pixels++;
 	}
-
+	printf("\nNodes lu 1st time");
 	int *probabilities = new int[num_pixels*num_labels];
 
 	std::ifstream infile2("nodes.txt");
 	int a,b,c,d,e,f ;
+	long new_pixels = 0;
 	while (infile2 >> a >> b >> c >> d >> e >> f)
 	{
-		probabilities[num_pixels*6] = -a;
-		probabilities[num_pixels*6+1] = -b;
-		probabilities[num_pixels*6+2] = -c;
-		probabilities[num_pixels*6+3] = -d;
-		probabilities[num_pixels*6+4] = -e;
-		probabilities[num_pixels*6+5] = -f;
-		num_pixels++;
+		probabilities[new_pixels*6] = -a;
+		probabilities[new_pixels*6+1] = -b;
+		probabilities[new_pixels*6+2] = -c;
+		probabilities[new_pixels*6+3] = -d;
+		probabilities[new_pixels*6+4] = -e;
+		probabilities[new_pixels*6+5] = -f;
+		new_pixels++;
 	}
+	printf("\nNodes lu 2nd time");
 
 	//get edges
 	std::ifstream infile3("edges.txt");
@@ -88,20 +91,26 @@ int main(int argc, char **argv)
 		num_edges++;
 	}
 
+	printf("\nEdges lu 1st time");
 	int *edges = new int[num_edges*2];
+	long new_edges = 0;
 
 	std::ifstream infile4("edges.txt");
 	int a2,b2 ;
 	while (infile4 >> a2 >> b2)
 	{
-		edges[num_edges*2] = a2;
-		edges[num_edges*2+1] = b2;
-		num_edges++;
+		edges[new_edges*2] = a2;
+		edges[new_edges*2+1] = b2;
+		new_edges++;
 	}
+	printf("\nEdges lu 2nd time");
 	//Will pretend our graph is general, and set up a neighborhood system
 	// which actually is a grid. Also uses spatially varying terms
-	GeneralGraph_DArraySArraySpatVarying(num_pixels,num_labels,num_edges,probabilities,edges);
-
+	int* result = AlphaExpansionOnApproximateGraph(num_pixels,num_labels,num_edges,probabilities,edges);
+	std::ofstream o("labels.txt");
+	for(int i = 0; i<num_pixels;i++){
+		o<<result[i]+1<<"\n";
+	}
 	printf("\n  Finished %d (%d) clock per sec %d",clock()/CLOCKS_PER_SEC,clock(),CLOCKS_PER_SEC);
 
 	return 0;
