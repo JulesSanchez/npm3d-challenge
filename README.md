@@ -30,6 +30,15 @@ Grab the code:
 wget http://mouse.cs.uwaterloo.ca/code/gco-v3.0.zip
 ```
 
+We use CMake as a build system for the C++ code. Build the code:
+```bash
+cd gco/
+mkdir build
+cd build/
+cmake ../
+make
+```
+
 
 ## References
 
