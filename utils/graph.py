@@ -29,4 +29,4 @@ def write_graph(graph: nx.Graph, labels, path):
     """
     np.savetxt(path+'edges.txt', graph.edges(),fmt='%i')
     # save nodes file as list of integer labels (= unary potentials)
-    np.savetxt(path+'nodes.txt', np.asarray(labels).astype(int), delimiter='\n', fmt='%i')
+    np.savetxt(path+'nodes.txt', np.asarray(labels).astype(int), fmt='%i')

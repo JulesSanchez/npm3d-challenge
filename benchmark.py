@@ -13,7 +13,7 @@ import subprocess
 from config import *
 
 ## Feature hyperparameters
-SIZE = 5000
+SIZE = 1000
 RADIUS_COV = 0.5
 MULTISCALE = [0.2,0.5,1,1.5]
 RADIUS_SHAPE = 1.5
@@ -148,10 +148,6 @@ def main(max_depth=3, n_estimators=100):
             classifier = xgb.XGBClassifier(max_depth=max_depth, n_estimators=n_estimators, objective='multi:softprob')
             classifier.fit(features, labels)
             score_ = classifier.score(features, labels)
-<<<<<<< HEAD
-
-=======
->>>>>>> 7046174b03031bc720bdc1e2d23cd876566d1600
             print('Training accuracy: %.2f' % (100*score_))
 
             val_cloud, val_label, val_tree = load_point_cloud(os.path.join(PATH_TRAIN,data_local['val'][0])+EXTENSION)
@@ -170,10 +166,10 @@ def main(max_depth=3, n_estimators=100):
                 for i in tqdm.tqdm(range(n_split+1)):
                     sub_val_cloud = new_val_cloud[i*100000:min((i+1)*100000,len(new_val_cloud))]
                     sub_features = assemble_features(val_cloud, sub_val_cloud, val_tree)
-                    sub_features = np.hstack((sub_features,sub_val_cloud[:,-1].reshape(-1,1)))
-                    soft_labels = soft_labels + list(classifier.predict_proba(sub_features))
                     os.makedirs('features/val', exist_ok=True)
                     np.save('features/val/'+str(i)+'.npy',sub_features)
+                    sub_features = np.hstack((sub_features,sub_val_cloud[:,-1].reshape(-1,1)))
+                    soft_labels = soft_labels + list(classifier.predict_proba(sub_features))
             else:
                 print("Loading precomputed val set features.")
                 for i in tqdm.tqdm(range(n_split+1)):
@@ -243,9 +239,9 @@ def main(max_depth=3, n_estimators=100):
             for i in tqdm.tqdm(range(n_split+1)):
                 sub_test_cloud = test_cloud[i*100000:min((i+1)*100000,len(test_cloud))]
                 features_test = assemble_features(test_cloud, sub_test_cloud, tree, verbose=False)
-                features_test = np.hstack((features_test,sub_test_cloud[:,-1].reshape(-1,1)))
                 os.makedirs('features/test', exist_ok=True)
                 np.save('features/test/'+str(i)+'.npy',features_test)
+                features_test = np.hstack((features_test,sub_test_cloud[:,-1].reshape(-1,1)))
                 soft_labels = soft_labels + list(classifier.predict_proba(features_test))
         else:
             print("Loading precomputed test set features.")
@@ -280,7 +276,8 @@ if __name__ == '__main__':
                 g = graph.make_graph(test_cloud)
             else:
                 # For model selection, get validation set graph
-                val_cloud, _, _ = load_point_cloud(os.path.join(PATH_TRAIN,data_local['val'][0])+EXTENSION)
+                val_cloud, val_label, _ = load_point_cloud(os.path.join(PATH_TRAIN,data_local['val'][0])+EXTENSION)
+                val_cloud = val_cloud[val_label>0]
                 g = graph.make_graph(val_cloud)
             graph.write_graph(g,soft_labels*100,'')
             print("Created nodes and edges files.")
@@ -303,4 +300,3 @@ if __name__ == '__main__':
         print("IoU before graph cut: %.2f" % (100*score_soft_))
         score_hard_ = jaccard_score(val_label, predicted_hard_label, average='macro')
         print("IoU after graph cut: %.2f" % (100*score_hard_))
-
