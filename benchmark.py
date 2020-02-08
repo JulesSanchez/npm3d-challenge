@@ -284,14 +284,15 @@ if __name__ == '__main__':
         
         # load soft labels for comparison
         try:
-            predicted_soft_label = np.argmax(soft_labels,axis=1)
+            predicted_soft_label = np.argmax(soft_labels,axis=1) + 1
         except:
             # load soft label prediction from nodes file
-            predicted_soft_label = np.argmax(np.loadtxt('nodes.txt'),axis=1)
-        # load hard labels
-        predicted_hard_label = np.loadtxt('labels.txt')
+            predicted_soft_label = np.argmax(np.loadtxt('nodes.txt'),axis=1) + 1
         score_soft_ = jaccard_score(val_label, predicted_soft_label, average='macro')
         print("IoU before graph cut: %.2f" % (100*score_soft_))
+        
+        # load hard labels
+        predicted_hard_label = np.loadtxt('labels.txt')
         score_hard_ = jaccard_score(val_label, predicted_hard_label, average='macro')
         print("IoU after graph cut: %.2f" % (100*score_hard_))
 
