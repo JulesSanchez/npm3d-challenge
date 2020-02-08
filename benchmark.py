@@ -282,11 +282,12 @@ if __name__ == '__main__':
             graph.write_graph(g,soft_labels*100,'')
             print("Created nodes and edges files.")
         # Get hard labels by graph cut.
+        t1 = time.time()
         run_graphcut()
+        print('Graph cut applied. Elapsed time: %.3f' %(time.time()-t1))
     if MODEL_SELECTION:
         _, val_label, _ = load_point_cloud(os.path.join(PATH_TRAIN,data_local['val'][0])+EXTENSION)
         val_label = val_label[val_label>0]
-
         
         # load soft labels for comparison
         try:
