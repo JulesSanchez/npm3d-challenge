@@ -148,10 +148,7 @@ def main(max_depth=3, n_estimators=100):
             classifier = xgb.XGBClassifier(max_depth=max_depth, n_estimators=n_estimators, objective='multi:softprob')
             classifier.fit(features, labels)
             score_ = classifier.score(features, labels)
-<<<<<<< HEAD
 
-=======
->>>>>>> 7046174b03031bc720bdc1e2d23cd876566d1600
             print('Training accuracy: %.2f' % (100*score_))
 
             val_cloud, val_label, val_tree = load_point_cloud(os.path.join(PATH_TRAIN,data_local['val'][0])+EXTENSION)
