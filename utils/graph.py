@@ -2,7 +2,7 @@ import numpy as np
 import networkx as nx 
 from sklearn.neighbors import KDTree
 
-def make_graph(point_cloud,n=9):
+def make_graph(point_cloud, n=9):
     """Create a k-nearest neighbor graph from the point cloud."""
     tree = KDTree(point_cloud)
     g = nx.Graph()
