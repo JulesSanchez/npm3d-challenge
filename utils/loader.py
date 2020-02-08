@@ -1,22 +1,22 @@
-import open3d as o3d 
-import numpy as np 
+import open3d as o3d
+import numpy as np
 from copy import copy
-from plyfile import PlyData, PlyElement
+from plyfile import PlyData
 
 import torch
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
+from torch.utils.data import Dataset
 
 from utils.subsampler import get_even_number
 from utils.features_computation import compute_covariance_features
 
-NAMEFILES = ['MiniLille1','MiniLille2','MiniParis1']
+NAMEFILES = ['MiniLille1', 'MiniLille2', 'MiniParis1']
 NAMETEST = ['MiniDijon9']
 
 CLASSES = ['Unclassified', 'Ground', 'Building',
            'Poles', 'Pedestrians', 'Cars', 'Vegetation']
 
-def preprocess(name,path_output=False,voxel_size = 0.5, labels = True):
+
+def preprocess(name, path_output=False, voxel_size=0.5, labels=True):
     """Preprocess a point cloud file using voxel downsampling.
     
     Parameters
@@ -30,43 +30,45 @@ def preprocess(name,path_output=False,voxel_size = 0.5, labels = True):
     labels : bool
         Whether to process the labels, too (i.e. by voting).
     """
-    #path_output should not have an extension
-    #name need an extension
+    # path_output should not have an extension
+    # name need an extension
     plydata = PlyData.read(name)
     pcd = o3d.io.read_point_cloud(name)
-    if labels :
+    if labels:
         labels = np.asarray(plydata.elements[0].data['class'])
         indices = labels > 0
         labels = labels[indices].astype(np.float32)
         pcd.points = o3d.utility.Vector3dVector(np.asarray(pcd.points)[indices])
         max_label = np.max(labels)
         labels /= max_label
-        pcd.colors = o3d.utility.Vector3dVector(np.ones(shape=(labels.shape[0],3))*labels[:,None])
+        pcd.colors = o3d.utility.Vector3dVector(
+            np.ones(shape=(labels.shape[0], 3)) * labels[:,None])
         downpcd = pcd.voxel_down_sample(voxel_size=voxel_size)
-        downpcd.colors = o3d.utility.Vector3dVector(np.round(downpcd.colors*max_label))
+        downpcd.colors = o3d.utility.Vector3dVector(np.round(downpcd.colors * max_label))
         labels = np.asarray(downpcd.colors)[:,0]
         print('Number of points inside the downsampled point cloud : ' + str(len(labels)))
         if path_output:
-            o3d.io.write_point_cloud(path_output+'.ply',downpcd)
-            np.savetxt(path_output+'.txt',labels.astype(int),delimiter='\n',fmt='%i')
+            o3d.io.write_point_cloud(path_output + '.ply', downpcd)
+            np.savetxt(path_output + '.txt', labels.astype(int),delimiter='\n', fmt='%i')
         return np.asarray(downpcd.points), np.asarray(downpcd.colors)
     else:
         downpcd = pcd.voxel_down_sample(voxel_size=voxel_size)
         if path_output:
-            o3d.io.write_point_cloud(path_output+'.ply',downpcd)
+            o3d.io.write_point_cloud(path_output + '.ply', downpcd)
         return np.asarray(downpcd.points), None
 
+
 def load_downsampled_point_cloud(path_output):
-    #path_output should not have an extension
-    point_cloud, tree = load_point_cloud(path_output+'.ply')
+    # path_output should not have an extension
+    point_cloud, tree = load_point_cloud(path_output + '.ply')
     try:
-        labels = np.loadtxt(path_output+'.txt')
+        labels = np.loadtxt(path_output + '.txt')
         return point_cloud, labels, tree
     except:
         return point_cloud, tree
 
 
-def load_point_cloud(name,down_sample=False):
+def load_point_cloud(name, down_sample=False):
     """Load the point cloud.
     
     Parameters
@@ -117,13 +119,11 @@ def cross_val():
     return folds
 
 
-def write_results(path, labels,test=True):
+def write_results(path, labels, test=True):
     if test:
-        np.savetxt(path+NAMETEST[0]+'nodes.txt',labels.astype(int),fmt='%i')
+        np.savetxt(path + NAMETEST[0] + 'nodes.txt', labels.astype(int),fmt='%i')
     else:
-        np.savetxt(path+'nodes.txt',np.array(labels).astype(int),fmt='%i')
-    return 
-
+        np.savetxt(path + 'nodes.txt', np.array(labels).astype(int),fmt='%i')
 
 
 class MyPointCloud(Dataset):
@@ -142,11 +142,11 @@ class MyPointCloud(Dataset):
     def __len__(self):
         return len(self.points)
     
-    
     def __getitem__(self, idx: int):
         """Allows to index into the point cloud.
         
-        Use the `get_sample` method inside of your training loop instead instead."""
+        Use the `get_sample` method inside of your training loop
+        instead instead."""
         if torch.is_tensor(idx):
             idx = idx.tolist()
         
@@ -155,7 +155,6 @@ class MyPointCloud(Dataset):
             labels = torch.from_numpy(labels)
         return torch.from_numpy(self.points[idx]), labels
      
-    
     def get_sample(self, size=1000):
         subcloud, sublabels = get_even_number(
             self.points, self.labels, size)
@@ -171,7 +170,6 @@ class MyPointCloud(Dataset):
             features = compute_covariance_features(
                 subcloud, self.points, self.tree, radius=self.radius)
 
-        
         subcloud = torch.from_numpy(subcloud).float()
         sublabels = torch.from_numpy(sublabels).long()
         features = [torch.from_numpy(f).unsqueeze(1).float() for f in features]
@@ -233,5 +231,3 @@ class ConcatVoxelizedPointCloud(torch.utils.data.ConcatDataset):
         dataset_idx = np.random.choice(len(self.datasets), p=self.proportions)
         d: VoxelizedPointCloud = self.datasets[dataset_idx]
         return d.get()
-
-
