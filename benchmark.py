@@ -13,7 +13,7 @@ import time
 from config import *
 
 ## Feature hyperparameters
-SIZE = 1000
+SIZE = 5000
 RADIUS_COV = 0.5
 MULTISCALE = [0.2,0.5,1,1.5]
 RADIUS_SHAPE = 1.5
@@ -78,7 +78,6 @@ def main(max_depth=3, n_estimators=100):
         for k in range(len(data_cross_val)-2):
             # assemble training point cloud data
             data_local = data_cross_val[k]
-
             feature_list_ = []
             label_list_ = []
 
@@ -92,6 +91,7 @@ def main(max_depth=3, n_estimators=100):
                 print("Subsampling time for train cloud #%d:"%(i+1), time.time() - t1)
                 print("Computing features on train cloud #%d..."%(i+1))
                 features = assemble_features(train_cloud, subcloud, tree)
+                features = np.hstack((features,subcloud[:,-1].reshape(-1,1)))
                 feature_list_.append(features)
                 label_list_.append(sublabels)
 
@@ -101,7 +101,8 @@ def main(max_depth=3, n_estimators=100):
             classifier = xgb.XGBClassifier(max_depth=max_depth, n_estimators=n_estimators, objective='multi:softprob')
             classifier.fit(features, labels)
             score_ = classifier.score(features, labels)
-            print('Training accuracy: %.2f%' % (100*score_))
+
+            print('Training accuracy: %.2f' % (100*score_))
 
             val_cloud, val_label, val_tree = load_point_cloud(os.path.join(PATH_TRAIN,data_local['val'][0])+EXTENSION)
             indices = val_label > 0
@@ -115,12 +116,15 @@ def main(max_depth=3, n_estimators=100):
                 for i in tqdm.tqdm(range(n_split+1)):
                     sub_val_cloud = new_val_cloud[i*100000:min((i+1)*100000,len(new_val_cloud))]
                     sub_features = assemble_features(val_cloud, sub_val_cloud, val_tree)
+                    sub_features = np.hstack((sub_features,sub_val_cloud[:,-1].reshape(-1,1)))
                     soft_labels = soft_labels + list(classifier.predict_proba(sub_features))
                     os.makedirs('features/val', exist_ok=True)
                     np.save('features/val/'+str(i)+'.npy',sub_features)
             else:
                 for i in tqdm.tqdm(range(n_split+1)):
                     sub_features = np.load('features/val/'+str(i)+'.npy')
+                    sub_val_cloud = new_val_cloud[i*100000:min((i+1)*100000,len(new_val_cloud))]
+                    sub_features = np.hstack((sub_features,sub_val_cloud[:,-1].reshape(-1,1)))
                     soft_labels = soft_labels + list(classifier.predict_proba(sub_features))
             soft_labels = np.array(soft_labels)
             print(soft_labels.shape)
@@ -185,12 +189,14 @@ def main(max_depth=3, n_estimators=100):
             for i in tqdm.tqdm(range(n_split+1)):
                 sub_test_cloud = test_cloud[i*100000:min((i+1)*100000,len(test_cloud))]
                 features_test = assemble_features(test_cloud, sub_test_cloud, tree, verbose=False)
+                features_test = np.hstack((features_test,sub_test_cloud[:,-1].reshape(-1,1)))
                 os.makedirs('features/test', exist_ok=True)
                 np.save('features/test/'+str(i)+'.npy',features_test)
                 soft_labels = soft_labels + list(classifier.predict_proba(features_test))
         else :
             for i in tqdm.tqdm(range(n_split+1)):
                 features_test = np.load('features/test/'+str(i)+'.npy')
+                features_test = np.hstack((features_test,sub_test_cloud[:,-1].reshape(-1,1)))
                 soft_labels = soft_labels + list(classifier.predict_proba(features_test))
         soft_labels = np.array(soft_labels)
         #write_results('',soft_labels*100, False)
@@ -228,11 +234,11 @@ if __name__ == '__main__':
         _, val_label, _ = load_point_cloud(os.path.join(PATH_TRAIN,data_local['val'][0])+EXTENSION)
         val_label = val_label[val_label>0]
         try:
-            predicted_soft_label = np.argmax(soft_labels,axis=1)
+            predicted_soft_label = np.argmax(soft_labels,axis=1) + 1
         except:
-            predicted_soft_label = np.argmax(np.loadtxt('nodes.txt'),axis=1)
+            predicted_soft_label = np.argmax(np.loadtxt('nodes.txt'),axis=1) + 1
         predicted_hard_label = np.loadtxt('labels.txt')
-        print("IoU before graph cut : " + str(jaccard_score(val_label,predicted_soft_label)))
-        print("IoU after graph cut : " + str(jaccard_score(val_label,predicted_hard_label)))
+        print("IoU before graph cut : " + str(jaccard_score(val_label,predicted_soft_label,average='macro')))
+        print("IoU after graph cut : " + str(jaccard_score(val_label,predicted_hard_label,average='macro')))
 
     
