@@ -19,7 +19,7 @@ PULLS = 255
 CLASSES = ['Unclassified','Ground','Building','Poles','Pedestrians','Cars','Vegetation']
 MODEL_SELECTION = False 
 COMPUTED = True
-PRECOMPUTED = False
+PRECOMPUTED = True
 import time 
 
 if __name__ == '__main__':
@@ -181,18 +181,18 @@ if __name__ == '__main__':
             classifier = xgb.XGBClassifier()
             classifier.fit(features,labels)
             print('Training accuracy : ' +str(classifier.score(features,labels)))
-            classifier = pickle.dump(classifier,open('fullKclassifier.pickle','wb'))
+            pickle.dump(classifier,open('fullKclassifier.pickle','wb'))
         else :
             classifier = pickle.load(open('fullKclassifier.pickle','rb'))
 
         test_cloud, tree = load_point_cloud(os.path.join(PATH_TEST,data_local['test'][0])+EXTENSION)
         #Ram friendly evaluation
         soft_labels = []
-        n_split = len(test_cloud)//100
+        n_split = len(test_cloud)//100000
         t1 = time.time()
         if not PRECOMPUTED:
-            for i in range(780,n_split+1):
-                local_val_cloud = test_cloud[i*100:min((i+1)*100,len(test_cloud))]
+            for i in range(n_split+1):
+                local_val_cloud = test_cloud[i*100000:min((i+1)*100000,len(test_cloud))]
                 features_test_cov = np.empty((len(local_val_cloud),0),float)
                 for radi in MULTISCALE:
                     verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(local_val_cloud,test_cloud,tree,radius=radi)
@@ -206,7 +206,7 @@ if __name__ == '__main__':
                 soft_labels = soft_labels + list(classifier.predict_proba(features_test))
         else :
             for i in range(n_split+1):
-                feature_test = np.load('features/test_'+str(i)+'.npy')
+                features_test = np.load('features/test_'+str(i)+'.npy')
                 soft_labels = soft_labels + list(classifier.predict_proba(features_test))
         soft_labels = np.array(soft_labels)
         #labels_predicted = np.array(labels_predicted)

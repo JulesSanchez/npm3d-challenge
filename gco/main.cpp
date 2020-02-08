@@ -111,8 +111,7 @@ int main(int argc, char **argv)
 	for(int i = 0; i<num_pixels;i++){
 		o<<result[i]+1<<"\n";
 	}
-	printf("\n  Finished %lld (%lld) clock per sec %lld",
-			clock()/CLOCKS_PER_SEC,clock(),CLOCKS_PER_SEC);
+	printf("\n  Finished %lld (%lld) clock per sec %lld",clock()/CLOCKS_PER_SEC,clock(),CLOCKS_PER_SEC);
 
 	return 0;
 }
