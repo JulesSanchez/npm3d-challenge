@@ -31,13 +31,13 @@ def voxel_downsample_data(voxel_size=0.5):
     for filename in NAMEFILES:
         filepath = os.path.join("data/MiniChallenge/training", filename)
         print("Preprocessing %s" % filepath)
-        preprocess(filepath + ".ply", filepath + "_voxelized", VOXEL_SIZE)
+        preprocess(filepath + ".ply", filepath + "_voxelized", voxel_size)
 
     for filename in NAMETEST:
         filepath = os.path.join("data/MiniChallenge/test", filename)
         print("Preprocessing %s" % filepath)
-        preprocess(filepath + ".ply", filepath +
-                   "_voxelized", VOXEL_SIZE, labels=False)
+        preprocess(filepath + ".ply", filepath + "_voxelized",
+                   voxel_size, labels=False)
 
 
 def run_graphcut():
@@ -88,8 +88,8 @@ def assemble_features(point_cloud: np.ndarray, subcloud: np.ndarray, tree, verbo
     # Stack all covariance features.
     features_cov = np.hstack(features_cov)
     if verbose:
-        print('  Covariance features computed. Elapsed time: %.3f' %
-              (time.time() - t1))
+        print('  Covariance features computed in time %.2f' %
+              (time.time() - t1), end=' ')
         # print('feat cov shape:', features_cov.shape)
 
     t1 = time.time()
@@ -97,14 +97,16 @@ def assemble_features(point_cloud: np.ndarray, subcloud: np.ndarray, tree, verbo
         subcloud, point_cloud, tree, RADIUS_SHAPE, PULLS, NUM_BINS)
     features_shape = np.vstack((A1, A2, A3, A4, D3)).T
     if verbose:
-        print('  Shape features computed. Elapsed time: %.3f' %
+        print('  Shape features computed in time: %.2f' %
               (time.time() - t1))
     features = np.append(features_cov, features_shape, axis=1)
     return features
 
 
+CACHE = {}
 
-def main(max_depth=3, n_estimators=100):
+
+def main(max_depth=3, n_estimators=100, cache=CACHE):
     """Main loop: assemble training data subsamples, compute features,
     run XGBoost, run on every decimation of validation and test.
     
@@ -114,6 +116,9 @@ def main(max_depth=3, n_estimators=100):
         Maximum depth of the xgboost trees.
     n_estimators : int (default 100)
         Number of estimators for xgboost.
+    cache : dict
+        Cache that holds precomputed/preloaded data such as validation
+        or test feature vectors.
     
     Returns
     -------
@@ -140,22 +145,26 @@ def main(max_depth=3, n_estimators=100):
                 t1 = time.time()
                 subcloud, sublabels = get_even_number(
                     train_cloud, train_label, SIZE)
-                print("Subsampling time for train cloud #%d: %.3f" % ((i + 1), time.time() - t1))
-                print("Computing features on train cloud #%d..." % (i + 1))
+                print("Train cloud #%d -- Subsampling time: %.3f"
+                      % ((i + 1), time.time() - t1))
                 features = assemble_features(train_cloud, subcloud, tree)
-                features = np.hstack((features, subcloud[:, -1].reshape(-1, 1)))
+                features = np.hstack((features,
+                                      subcloud[:, -1].reshape(-1, 1)))
                 feature_list_.append(features)
                 label_list_.append(sublabels)
 
             features = np.vstack(feature_list_)
             labels = np.hstack(label_list_)
 
-            classifier = xgb.XGBClassifier(max_depth=max_depth, n_estimators=n_estimators, objective='multi:softprob')
+            classifier = xgb.XGBClassifier(max_depth=max_depth,
+                                           n_estimators=n_estimators,
+                                           objective='multi:softprob')
             classifier.fit(features, labels)
             score_ = classifier.score(features, labels)
-            print('Training accuracy: %.2f' % (100*score_))
+            print('Training accuracy: %.2f%%' % (100 * score_))
 
-            val_cloud, val_label, val_tree = load_point_cloud(os.path.join(PATH_TRAIN,data_local['val'][0])+EXTENSION)
+            val_cloud, val_label, val_tree = load_point_cloud(
+                os.path.join(PATH_TRAIN, data_local['val'][0]) + EXTENSION)
             indices = val_label > 0
             new_val_cloud = val_cloud[indices]
             new_val_label = val_label[indices]
@@ -169,24 +178,39 @@ def main(max_depth=3, n_estimators=100):
             if not VAL_FEATURES_PRECOMPUTED:
                 print("Computing val set features.")
                 for i in tqdm.tqdm(range(n_split + 1)):
-                    sub_val_cloud = new_val_cloud[i * 100000:min((i + 1) * 100000,len(new_val_cloud))]
+                    sub_val_cloud = new_val_cloud[i * 100000:min((i + 1) * 100000, len(new_val_cloud))]
                     sub_features = assemble_features(val_cloud, sub_val_cloud, val_tree)
                     os.makedirs('features/val', exist_ok=True)
                     np.save('features/val/' + str(i) + '.npy', sub_features)
                     sub_features = np.hstack((sub_features, sub_val_cloud[:, -1].reshape(-1, 1)))
                     soft_labels = soft_labels + list(classifier.predict_proba(sub_features))
             else:
-                print("Loading precomputed val set features.")
+                print("Loading precomputed val set features...", end=' ')
+                cached_val_features = cache.get('val_features')
+                if cached_val_features is None or len(cached_val_features) < n_split:
+                    cached_val_features = []
+                    load_from_cache = False
+                    print('from file and saving into cache')
+                else:
+                    print("from cache")
+                    load_from_cache = True
+                
                 for i in tqdm.tqdm(range(n_split + 1)):
-                    sub_features = np.load('features/val/'+str(i)+'.npy')
-                    sub_val_cloud = new_val_cloud[i * 100000:min((i + 1) * 100000,len(new_val_cloud))]
-                    sub_features = np.hstack((sub_features, sub_val_cloud[:, -1].reshape(-1, 1)))
+                    sub_val_cloud = new_val_cloud[i * 100000:min((i + 1) * 100000, len(new_val_cloud))]
+                    if load_from_cache:
+                        sub_features = cached_val_features[i]
+                    else:
+                        sub_features = np.load('features/val/' + str(i) + '.npy')
+                        sub_features = np.hstack((sub_features,
+                                                  sub_val_cloud[:, -1].reshape(-1, 1)))
+                        cached_val_features.append(sub_features)
                     soft_labels = soft_labels + list(classifier.predict_proba(sub_features))
+                cache['val_features'] = cached_val_features
             soft_labels = np.array(soft_labels)
             labels_predicted = np.argmax(soft_labels, axis=1) + 1
             val_score = accuracy_score(new_val_label, labels_predicted)
             print('Time to score on ' + data_local['val'][0] + ' : ' + str(time.time() - t1))
-            print('Validation accuracy : ' + str(val_score))
+            print('Validation accuracy: %.2f%%' % (100 * val_score))
             
             for i in range(1, len(CLASSES)):
                 indices = new_val_label == i
@@ -194,14 +218,14 @@ def main(max_depth=3, n_estimators=100):
                                                  new_val_label[indices])
                 if math.isnan(local_val_score):
                     continue
-                print('Validation accuracy for label %s: %.3f'
-                      % (CLASSES[i], local_val_score))
+                print('Validation accuracy for label %s: %.2f%%'
+                      % (CLASSES[i], 100 * local_val_score))
             # write_results('',soft_labels*100,False)
             classifiers.append(classifier)
             if val_score > best_score:
                 best_classifier = k
                 best_score = val_score
-        filename = str(SIZE//1000) + 'Kclassifier.pickle'
+        filename = str(SIZE // 1000) + 'Kclassifier.pickle'
         with open(filename, 'wb') as f:
             pickle.dump(classifiers[best_classifier], f)
     else:
@@ -218,9 +242,8 @@ def main(max_depth=3, n_estimators=100):
                 t1 = time.time()
                 subcloud, sublabels = get_even_number(
                     train_cloud, train_label, SIZE)
-                print("Subsampling time for train cloud #%d: %.3f" %
-                      ((i+1), time.time() - t1))
-                print("Computing features on train cloud #%d..." % (i + 1))
+                print("Train cloud #%d -- Subsampling time: %.3f" %
+                      ((i + 1), time.time() - t1))
                 features = assemble_features(train_cloud, subcloud, tree)
 
                 feature_list_.append(features)
@@ -233,24 +256,25 @@ def main(max_depth=3, n_estimators=100):
                                            n_estimators=n_estimators,
                                            objective='multi:softprob')
             classifier.fit(features, labels)
-            print('Training accuracy : ' +str(classifier.score(features, labels)))
+            score_ = classifier.score(features, labels)
+            print('Training accuracy: %.2f%%' % (100 * score_))
             with open('fullKclassifier.pickle', 'wb') as f:
                 pickle.dump(classifier, f)
         else:
-            with open('fullKclassifier.pickle','rb') as f:
+            with open('fullKclassifier.pickle', 'rb') as f:
                 classifier = pickle.load(f)
 
         test_cloud, tree = load_point_cloud(
             os.path.join(PATH_TEST, data_local['test'][0]) + EXTENSION)
-        #Ram friendly evaluation
+        # Ram friendly evaluation
         soft_labels = []
-        n_split = len(test_cloud)//100000
+        n_split = len(test_cloud) // 100000
         print("Number of test set splits: %d" % n_split)
         t1 = time.time()
         if not TEST_FEATURES_PRECOMPUTED:
             print("Computing test set features.")
             for i in tqdm.tqdm(range(n_split + 1)):
-                sub_test_cloud = test_cloud[i * 100000:min((i + 1) * 100000,len(test_cloud))]
+                sub_test_cloud = test_cloud[i * 100000:min((i + 1) * 100000, len(test_cloud))]
                 features_test = assemble_features(test_cloud, sub_test_cloud, tree, verbose=False)
                 os.makedirs('features/test', exist_ok=True)
                 np.save('features/test/' + str(i) + '.npy', features_test)
@@ -272,25 +296,24 @@ if __name__ == '__main__':
     data_local = data_cross_val[0]
     if not VAL_RESULTS:
         # do not assume nodes.txt, edges.txt, and labels.txt exist
-        print('Computing soft labels...')
         soft_labels = main()  # using default parameters here
 
-        try:
-            f = open("edges.txt")
+        EDGE_FILE_EXISTS = os.path.exists("edges.txt")
+        if EDGE_FILE_EXISTS:
             print("Edges file already exists, writing nodes file...", end=' ')
             # this only writes nodes file
             write_results('', soft_labels * 100, False)
-            f.close()
-            print("Done.")
-        except:
+        else:
             print("Computing graph...")
             if not MODEL_SELECTION:
                 # Outside model selection, compute test set graph
-                test_cloud, _ = load_point_cloud(os.path.join(PATH_TEST,data_local['test'][0])+EXTENSION)
+                test_cloud, _ = load_point_cloud(
+                    os.path.join(PATH_TEST, data_local['test'][0]) + EXTENSION)
                 g = graph.make_graph(test_cloud)
             else:
                 # For model selection, get validation set graph
-                val_cloud, val_label, _ = load_point_cloud(os.path.join(PATH_TRAIN,data_local['val'][0])+EXTENSION)
+                val_cloud, val_label, _ = load_point_cloud(
+                    os.path.join(PATH_TRAIN, data_local['val'][0]) + EXTENSION)
                 val_cloud = val_cloud[val_label > 0]
                 g = graph.make_graph(val_cloud)
             graph.write_graph(g, soft_labels * 100, '')

@@ -41,3 +41,4 @@ You can then check that the example file compiles:
 
 * Blomley et al. _SHAPE DISTRIBUTION FEATURES FOR POINT CLOUD ANALYSIS- A GEOMETRIC HISTOGRAM APPROACH ON MULTIPLE SCALES_ https://www.isprs-ann-photogramm-remote-sens-spatial-inf-sci.net/II-3/9/2014/isprsannals-II-3-9-2014.pdf
 * Loic Landrieu, Hugo Raguet, Bruno Vallet, Clément Mallet, Martin Weinmann.  _A structured regularization framework for spatially smoothing semantic labelings of 3D point clouds._ ISPRS Journal of Photogrammetry and Remote Sensing, Elsevier, 2017, 132, pp.102-118. [Link](https://hal.archives-ouvertes.fr/hal-01505245v2)
+* Bergstra, J., Yamins, D., Cox, D. D. (2013) _Making a Science of Model Search: Hyperparameter Optimization in Hundreds of Dimensions for Vision Architectures._ To appear in Proc. of the 30th International Conference on Machine Learning (ICML 2013).

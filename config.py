@@ -12,5 +12,5 @@ LOAD_TRAINED = False
 TEST_FEATURES_PRECOMPUTED = True
 # whether the features were precomputed or not for the validation dataset.
 VAL_FEATURES_PRECOMPUTED = True
-# whether or not to evaluate validation results assuming nodes, labels and edges exist
+# whether to evaluate validation results assuming nodes, labels and edges exist
 VAL_RESULTS = False
