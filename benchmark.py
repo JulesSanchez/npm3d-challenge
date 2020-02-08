@@ -114,7 +114,7 @@ def main(max_depth=3, n_estimators=100):
             if not VAL_FEATURES_PRECOMPUTED:
                 for i in tqdm.tqdm(range(n_split+1)):
                     sub_val_cloud = new_val_cloud[i*100000:min((i+1)*100000,len(new_val_cloud))]
-                    sub_features = assemble_features(new_val_cloud, sub_val_cloud, val_tree)
+                    sub_features = assemble_features(val_cloud, sub_val_cloud, val_tree)
                     soft_labels = soft_labels + list(classifier.predict_proba(sub_features))
                     os.makedirs('features/val', exist_ok=True)
                     np.save('features/val/'+str(i)+'.npy',sub_features)
