@@ -17,6 +17,19 @@ CLASSES = ['Unclassified', 'Ground', 'Building',
            'Poles', 'Pedestrians', 'Cars', 'Vegetation']
 
 def preprocess(name,path_output=False,voxel_size = 0.5, labels = True):
+    """Preprocess a point cloud file using voxel downsampling.
+    
+    Parameters
+    ----------
+    name : str
+        Name of the point cloud data file.
+    path_output : str
+        Filepath for the processed point cloud (without extension).
+    voxel_size : float
+        Voxel size to use for downsampling.
+    labels : bool
+        Whether to process the labels, too (i.e. by voting).
+    """
     #path_output should not have an extension
     #name need an extension
     plydata = PlyData.read(name)
