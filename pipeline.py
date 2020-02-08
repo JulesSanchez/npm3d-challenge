@@ -9,7 +9,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import hyperopt
 import subprocess
+from utils.loader import preprocess, NAMEFILES, NAMETEST
 from sklearn.metrics import jaccard_score
+
+
+def voxel_downsample_data(voxel_size=0.5):
+    """DEPRECATED. Preprocess the point cloud files with voxel downsampling."""
+    for filename in NAMEFILES:
+        filepath = os.path.join("data/MiniChallenge/training", filename)
+        print("Preprocessing %s" % filepath)
+        preprocess(filepath+".ply", filepath+"_voxelized", VOXEL_SIZE)
+
+    for filename in NAMETEST:
+        filepath = os.path.join("data/MiniChallenge/test", filename)
+        print("Preprocessing %s" % filepath)
+        preprocess(filepath+".ply", filepath +
+                   "_voxelized", VOXEL_SIZE, labels=False)
 
 
 def run_graphcut():

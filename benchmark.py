@@ -7,11 +7,8 @@ import numpy as np
 import xgboost as xgb
 import tqdm
 import pickle
-import time 
-
-PATH_TRAIN = 'data/MiniChallenge/training'
-PATH_TEST = 'data/MiniChallenge/test'
-EXTENSION = '.ply'
+import time
+from config import *
 
 ## Feature hyperparameters
 SIZE = 1000
@@ -20,12 +17,7 @@ MULTISCALE = [0.2,0.5,1,1.5]
 RADIUS_SHAPE = 1.5
 NUM_BINS = 10
 PULLS = 255
-MODEL_SELECTION = False
 
-# whether to load a XGB file checkpoint
-LOAD_TRAINED = False
-# whether the features were precomputed or not for the test dataset.
-TEST_FEATURES_PRECOMPUTED = False
 
 
 def assemble_features(point_cloud: np.ndarray, subcloud: np.ndarray, tree, verbose=True):
