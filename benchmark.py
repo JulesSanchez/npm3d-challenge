@@ -1,7 +1,9 @@
 from utils.loader import load_point_cloud, cross_val, write_results, CLASSES
 from utils.features_computation import compute_covariance_features, shape_distributions
 from utils.subsampler import get_even_number
-from sklearn.metrics import accuracy_score
+from utils import graph
+from pipeline import run_graphcut
+from sklearn.metrics import accuracy_score, jaccard_score
 import os, math
 import numpy as np 
 import xgboost as xgb
@@ -23,11 +25,13 @@ PULLS = 255
 MODEL_SELECTION = False
 
 # whether to load a XGB file checkpoint
-LOAD_TRAINED = False
+LOAD_TRAINED = True
 # whether the features were precomputed or not for the test dataset.
-TEST_FEATURES_PRECOMPUTED = False
-
-
+TEST_FEATURES_PRECOMPUTED = True
+# whether the features were precomputed or not for the val dataset.
+VAL_FEATURES_PRECOMPUTED = False
+# assuming txt already exists, compute IoU directly
+VAL_RESULTS = False
 def assemble_features(point_cloud: np.ndarray, subcloud: np.ndarray, tree, verbose=True):
     """Extract and assemble a feature vector for the point cloud.
     
@@ -73,7 +77,7 @@ def assemble_features(point_cloud: np.ndarray, subcloud: np.ndarray, tree, verbo
     return features
 
 
-def main():
+def main(max_depth=3, n_estimators=100):
     """Main loop: assemble training data subsamples, compute features,
     run XGBoost, validate on every decimation of validation and test."""
     data_cross_val = cross_val()
@@ -83,7 +87,7 @@ def main():
         best_score = 0
         best_classifier = 0
 
-        for k in range(len(data_cross_val)):
+        for k in range(len(data_cross_val)-2):
             # assemble training point cloud data
             data_local = data_cross_val[k]
 
@@ -106,7 +110,7 @@ def main():
             features = np.vstack(feature_list_)
             labels = np.hstack(label_list_)
 
-            classifier = xgb.XGBClassifier(objective='multi:softprob')
+            classifier = xgb.XGBClassifier(max_depth=max_depth, n_estimators=n_estimators, objective='multi:softprob')
             classifier.fit(features, labels)
             score_ = classifier.score(features, labels)
             print('Training accuracy: %.2f%' % (100*score_))
@@ -117,12 +121,19 @@ def main():
             new_val_label = val_label[indices]
             #Ram friendly evaluation
             soft_labels = []
-            n_split = len(new_val_cloud)//100
+            n_split = len(new_val_cloud)//100000
             t1 = time.time()
-            for i in range(n_split+1):
-                sub_val_cloud = new_val_cloud[i*100:min((i+1)*100,len(new_val_cloud))]
-                sub_features = assemble_features(new_val_cloud, sub_val_cloud, val_tree)
-                soft_labels = soft_labels + list(classifier.predict_proba(sub_features))
+            if not VAL_FEATURES_PRECOMPUTED:
+                for i in tqdm.tqdm(range(n_split+1)):
+                    sub_val_cloud = new_val_cloud[i*100000:min((i+1)*100000,len(new_val_cloud))]
+                    sub_features = assemble_features(new_val_cloud, sub_val_cloud, val_tree)
+                    soft_labels = soft_labels + list(classifier.predict_proba(sub_features))
+                    os.makedirs('features/val', exist_ok=True)
+                    np.save('features/val/'+str(i)+'.npy',sub_features)
+            else:
+                for i in tqdm.tqdm(range(n_split+1)):
+                    sub_features = np.load('features/val/'+str(i)+'.npy')
+                    soft_labels = soft_labels + list(classifier.predict_proba(sub_features))
             soft_labels = np.array(soft_labels)
             print(soft_labels.shape)
             labels_predicted = np.argmax(soft_labels,axis=1) + 1
@@ -135,7 +146,7 @@ def main():
                 if math.isnan(local_val_score):
                     continue
                 print('Validation accuracy for label ' + CLASSES[i] +' : '  +str(local_val_score))
-            write_results(os.path.join(PATH_TRAIN,data_local['val'][0]),soft_labels*100)
+            #write_results('',soft_labels*100,False)
             classifiers.append(classifier)
             if val_score > best_score:
                 best_classifier = k
@@ -167,7 +178,7 @@ def main():
             # import ipdb; ipdb.set_trace()
             labels = np.hstack(label_list_)
 
-            classifier = xgb.XGBClassifier()
+            classifier = xgb.XGBClassifier(max_depth=max_depth, n_estimators=n_estimators, objective='multi:softprob')
             classifier.fit(features,labels)
             print('Training accuracy : ' +str(classifier.score(features,labels)))
             with open('fullKclassifier.pickle', 'wb') as f:
@@ -179,27 +190,61 @@ def main():
         test_cloud, tree = load_point_cloud(os.path.join(PATH_TEST,data_local['test'][0])+EXTENSION)
         #Ram friendly evaluation
         soft_labels = []
-        n_split = len(test_cloud)//100
+        n_split = len(test_cloud)//100000
         print("Number of test set splits: %d" % n_split)
         t1 = time.time()
         if not TEST_FEATURES_PRECOMPUTED:
             for i in tqdm.tqdm(range(n_split+1)):
-                sub_test_cloud = test_cloud[i*100:min((i+1)*100,len(test_cloud))]
+                sub_test_cloud = test_cloud[i*100000:min((i+1)*100000,len(test_cloud))]
                 features_test = assemble_features(test_cloud, sub_test_cloud, tree, verbose=False)
-                os.makedirs('features', exist_ok=True)
-                np.save('features/test_'+str(i)+'.npy',features_test)
-                #labels_predicted += list(classifier.predict(features_test))
+                os.makedirs('features/test', exist_ok=True)
+                np.save('features/test/'+str(i)+'.npy',features_test)
                 soft_labels = soft_labels + list(classifier.predict_proba(features_test))
         else :
             for i in tqdm.tqdm(range(n_split+1)):
-                feature_test = np.load('features/test_'+str(i)+'.npy')
+                features_test = np.load('features/test/'+str(i)+'.npy')
                 soft_labels = soft_labels + list(classifier.predict_proba(features_test))
         soft_labels = np.array(soft_labels)
-        #labels_predicted = np.array(labels_predicted)
-        write_results('results/',soft_labels*100)
-        with open('fullKclassifier.pickle', 'wb') as f:
-            pickle.dump(classifier, f)
-
+        #write_results('',soft_labels*100, False)
+    return soft_labels
 
 if __name__ == '__main__':
-    main()
+    data_cross_val = cross_val()
+    data_local = data_cross_val[0]
+    if not VAL_RESULTS:
+        soft_labels = main()
+
+        print('Soft labels predicted')
+
+        try:
+            f = open("edges.txt")
+            write_results('',soft_labels*100, False)
+            f.close()
+            print("Edges file already exists")
+        except :
+            if not MODEL_SELECTION:
+                print("Graph Computation")
+                test_cloud, _ = load_point_cloud(os.path.join(PATH_TEST,data_local['test'][0])+EXTENSION)
+                g = graph.make_graph(test_cloud)
+                graph.write_graph(g,soft_labels*100,'')
+                print("Edges file created")
+            else:
+                print("Graph Computation")
+                val_cloud, _, _ = load_point_cloud(os.path.join(PATH_TRAIN,data_local['val'][0])+EXTENSION)
+                g = graph.make_graph(val_cloud)
+                graph.write_graph(g,soft_labels*100,'')
+                print("Edges file created")
+
+        run_graphcut()
+    if MODEL_SELECTION:
+        _, val_label, _ = load_point_cloud(os.path.join(PATH_TRAIN,data_local['val'][0])+EXTENSION)
+        val_label = val_label[val_label>0]
+        try:
+            predicted_soft_label = np.argmax(soft_labels,axis=1)
+        except:
+            predicted_soft_label = np.argmax(np.loadtxt('nodes.txt'),axis=1)
+        predicted_hard_label = np.loadtxt('labels.txt')
+        print("IoU before graph cut : " + str(jaccard_score(val_label,predicted_soft_label)))
+        print("IoU after graph cut : " + str(jaccard_score(val_label,predicted_hard_label)))
+
+    

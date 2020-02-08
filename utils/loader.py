@@ -106,9 +106,9 @@ def cross_val():
 
 def write_results(path, labels,test=True):
     if test:
-        np.savetxt(path+NAMETEST[0]+'_labels.txt',labels.astype(int),fmt='%i')
+        np.savetxt(path+NAMETEST[0]+'nodes.txt',labels.astype(int),fmt='%i')
     else:
-        np.savetxt(path+'_labels.txt',np.array(labels).astype(int),fmt='%i')
+        np.savetxt(path+'nodes.txt',np.array(labels).astype(int),fmt='%i')
     return 
 
 
