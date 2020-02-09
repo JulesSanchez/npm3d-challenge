@@ -7,19 +7,28 @@ import matplotlib.pyplot as plt
 from utils.loader import cross_val, load_point_cloud, write_results
 from utils import graph
 from sklearn.metrics import jaccard_score
-from benchmark import run_graphcut, main as run_benchmark, CACHE
+from benchmark import run_graphcut, main as run_benchmark
 import os
 import hyperopt
 from hyperopt import hp
+from datetime import date, datetime
+
+
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError("Type %s not serializable" % type(obj))
 
 
 def validation_objective(hyperparameters):
     """Objective function :math:`f` for the Bayesian hyperparameter
     optimisation algorithm."""
     print('Current parameters: %s' % hyperparameters)
-    max_depth = hyperparameters['max_depth']
-    n_estimators = hyperparameters['n_estimators']
-    num_neighbors = hyperparameters['num_neighbors']
+    max_depth = int(hyperparameters['max_depth'])
+    n_estimators = int(hyperparameters['n_estimators'])
+    num_neighbors = int(hyperparameters['num_neighbors'])
 
     soft_labels = run_benchmark(max_depth, n_estimators)
 
@@ -48,15 +57,16 @@ def validation_objective(hyperparameters):
     iou_score = jaccard_score(val_labels, pred_hard_labels,
                               average='macro')
     print("Obtained IoU score %.3f" % (100 * iou_score))
-    return -iou_score
+    return {'loss': -iou_score, 'params': hyperparameters,
+            'status': hyperopt.STATUS_OK}
 
 
 if __name__ == "__main__":
     plt.style.use("ggplot")
     
     space = {
-        'max_depth': 2 + hp.randint('xgb_max_depth', 4),
-        'n_estimators': 50 + hp.randint('xgb_n_estimators', 450),
+        'max_depth': hp.quniform('xgb_max_depth', 2, 6, 1),
+        'n_estimators': hp.quniform('xgb_n_estimators', 50, 500, 1),
         'num_neighbors': 9
     }
     
@@ -78,6 +88,5 @@ if __name__ == "__main__":
     import json
     
     # save best parameters dict
-    with open("hyperparam_best.json") as f:
-        json.dump(best, f)
-
+    with open("hyperparam_best.json", "w") as f:
+        json.dump(trials.best_trial, f, default=json_serial, indent=4)

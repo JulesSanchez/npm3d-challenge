@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 	for(int i = 0; i<num_pixels;i++){
 		o<<result[i]+1<<"\n";
 	}
-	printf(" Done.");
+	printf("Done.");
 	return 0;
 }
 
