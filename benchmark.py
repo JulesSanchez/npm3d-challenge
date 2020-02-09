@@ -283,6 +283,7 @@ def main(max_depth=3, n_estimators=100, cache=CACHE):
         else:
             print("Loading precomputed test set features.")
             for i in tqdm.tqdm(range(n_split + 1)):
+                sub_test_cloud = test_cloud[i * 100000:min((i + 1) * 100000, len(test_cloud))]
                 features_test = np.load('features/test/' + str(i) + '.npy')
                 features_test = np.hstack((features_test, sub_test_cloud[:, -1].reshape(-1, 1)))
                 soft_labels = soft_labels + list(classifier.predict_proba(features_test))
