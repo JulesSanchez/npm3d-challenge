@@ -10,6 +10,9 @@ data/MiniChallenge
 
 The `0` label corresponds to `Unclassified` data points in the point clouds.
 
+## Score
+
+The prevous' year best score is 63.32
 
 ## PointNet
 
