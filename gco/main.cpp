@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <iostream>
 #include <time.h>
 #include "src/GCoptimization.h"
 
@@ -50,16 +51,24 @@ int* AlphaExpansionOnApproximateGraph(int num_pixels, int num_labels, int num_ed
 
 }
 ////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * argv[0] nodes/edges folder path
+ * 
+ */
 int main(int argc, char **argv)
 {
-	printf("Computing alpha expansion...");
+	std::string folder_path(argv[1]);
+	std::cout << "Looking for data files in " << folder_path << std::endl;
+	std::cout << "Computing alpha expansion..." << std::endl;
 	long num_pixels = 0;
 	int num_labels = 6;
 	long num_edges = 0;
 
+	auto nodes_file = folder_path + "/nodes.txt";
+	std::cout << nodes_file << std::endl;
+
 	//get nodes
-	std::ifstream infile1("nodes.txt");
+	std::ifstream infile1(nodes_file);
 	int a_,b_,c_,d_,e_,f_;
 	while (infile1 >> a_ >> b_ >> c_ >> d_ >> e_ >> f_)
 	{
@@ -67,7 +76,7 @@ int main(int argc, char **argv)
 	}
 	int *probabilities = new int[num_pixels*num_labels];
 
-	std::ifstream infile2("nodes.txt");
+	std::ifstream infile2(nodes_file);
 	int a,b,c,d,e,f ;
 	long new_pixels = 0;
 	while (infile2 >> a >> b >> c >> d >> e >> f)
@@ -81,8 +90,10 @@ int main(int argc, char **argv)
 		new_pixels++;
 	}
 
+	auto edge_file = folder_path + "/edges.txt";
+
 	//get edges
-	std::ifstream infile3("edges.txt");
+	std::ifstream infile3(edge_file);
 	int a1,b1 ;
 	while (infile3 >> a1 >> b1)
 	{
@@ -92,7 +103,7 @@ int main(int argc, char **argv)
 	int *edges = new int[num_edges*2];
 	long new_edges = 0;
 
-	std::ifstream infile4("edges.txt");
+	std::ifstream infile4(edge_file);
 	int a2,b2 ;
 	while (infile4 >> a2 >> b2)
 	{
@@ -100,10 +111,12 @@ int main(int argc, char **argv)
 		edges[new_edges*2+1] = b2;
 		new_edges++;
 	}
+
+	auto label_file = folder_path + "/labels.txt";
 	//Will pretend our graph is general, and set up a neighborhood system
 	// which actually is a grid. Also uses spatially varying terms
 	int* result = AlphaExpansionOnApproximateGraph(num_pixels,num_labels,num_edges,probabilities,edges);
-	std::ofstream o("labels.txt");
+	std::ofstream o(label_file);
 	for(int i = 0; i<num_pixels;i++){
 		o<<result[i]+1<<"\n";
 	}
