@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.neighbors import KDTree
 import time
 import numba
+from loader import load_point_cloud
 EPSILON = 1e-10 
 
 @numba.njit
@@ -135,6 +136,82 @@ def shape_distributions(query_points, cloud_points, tree, radius=2.5, pulls=255,
 
     return D1, D2, D3, D4, A3, bins
 
+def assemble_features(point_cloud: np.ndarray, subcloud: np.ndarray, tree, scales_cov, scales_shape, verbose=True):
+    """Extract and assemble a feature vector for the point cloud.
+    
+    Parameters
+    ----------
+    point_cloud : ndarray
+        Point cloud data in R^3.
+    subcloud : ndarray
+        Subset of the point cloud.
+    tree : KDTree
+        Point cloud KDTree used to compute features using nearest-neighbor searches.
+    
+    Returns
+    -------
+    features : ndarray
+        Combined vector of all features.
+    """
+    NUM_BINS = 10
+    PULLS = 255
+    t1 = time.time()
+    features_cov = []
+    for radius in scales_cov:
+        verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(
+            subcloud, point_cloud, tree, radius=radius)
+        # Assemble local covariance features.
+        features_cov_local = np.vstack(
+            (verticality, linearity, planarity,
+             sphericity, omnivariance, anisotropy,
+             eigenentropy, sumeigen, change_curvature)
+        ).T
+        # Add to multi-scale list of covariance features.
+        features_cov.append(features_cov_local)
+    # Stack all covariance features.
+    features_cov = np.hstack(features_cov)
+    if verbose:
+        print('  Covariance features computed in time %.2f' %
+              (time.time() - t1), end=' ')
+        # print('feat cov shape:', features_cov.shape)
+
+    t1 = time.time()
+    features_shape = []
+    for radius in scales_shape:
+        A1, A2, A3, A4, D3, bins = shape_distributions(
+            subcloud, point_cloud, tree, scales_shape, PULLS, NUM_BINS)
+        features_shape_local = np.vstack((A1, A2, A3, A4, D3)).T
+        # Add to multi-scale list of covariance features.
+        features_shape.append(features_shape_local)
+    features_shape = np.hstack(features_shape)
+    if verbose:
+        print('  Shape features computed in time: %.2f' %
+              (time.time() - t1))
+    features = np.append(features_cov, features_shape, axis=1)
+    return features
+
+def precompute_features(path,save_path,cov_scale,shape_scale,is_train=True,n_slice=3)
+    if is_train:
+        cloud, label, tree = load_point_cloud(path)
+        local_cloud = cloud[label>0]
+        local_label = label[label>0]
+    else:
+        cloud, tree = load_point_cloud(path)
+        local_cloud = cloud
+    # Ram friendly evaluation: split the point cloud in n_slice slices
+    # then compute features on each slice.
+    print("Computing features.")
+    len_slice = len(local_cloud)//n_slice
+    for i in tqdm.tqdm(range(n_slice+1)):
+        sub_cloud = local_cloud[i * len_slice:min((i + 1) * len_slice, len(cloud))]
+        sub_features = assemble_features(cloud, sub_cloud, tree, cov_scale, shape_scale)
+        sub_features = np.hstack((sub_features, sub_cloud[:, -1].reshape(-1, 1)))
+        os.makedirs(save_path, exist_ok=True)
+        np.save(save_path + str(i) + '.npy', sub_features)
+        if is_train:
+            sub_labels = local_label[i * len_slice:min((i + 1) * len_slice, len(cloud))]
+            np.save(save_path + str(i) + '_labels.npy', sub_labels)
+    return len_slice
 
 def tda_features(point_cloud: np.ndarray):
     """Extract more features using Topological Data Analysis (TDA).

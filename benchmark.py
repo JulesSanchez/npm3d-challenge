@@ -8,7 +8,7 @@ import time
 import subprocess
 from utils.loader import load_point_cloud, cross_val, write_results, CLASSES
 from utils.loader import NAMEFILES, NAMETEST, preprocess
-from utils.features_computation import compute_covariance_features, shape_distributions
+from utils.features_computation import assemble_features
 from utils.subsampler import get_even_number
 from utils import graph
 from sklearn.metrics import accuracy_score, jaccard_score
@@ -21,7 +21,7 @@ from config import TEST_FEATURES_PRECOMPUTED, VAL_FEATURES_PRECOMPUTED
 SIZE = 1000
 RADIUS_COV = 0.5
 MULTISCALE = [0.2, 0.5, 1, 1.5]
-RADIUS_SHAPE = 1.5
+RADIUS_SHAPE = [1.5]
 NUM_BINS = 10
 PULLS = 255
 
@@ -53,54 +53,6 @@ def run_graphcut():
         subprocess.call("./gco/build/Main")
     except FileNotFoundError:
         subprocess.call("./build/Main")
-    
-
-def assemble_features(point_cloud: np.ndarray, subcloud: np.ndarray, tree, verbose=True):
-    """Extract and assemble a feature vector for the point cloud.
-    
-    Parameters
-    ----------
-    point_cloud : ndarray
-        Point cloud data in R^3.
-    subcloud : ndarray
-        Subset of the point cloud.
-    tree : KDTree
-        Point cloud KDTree used to compute features using nearest-neighbor searches.
-    
-    Returns
-    -------
-    features : ndarray
-        Combined vector of all features.
-    """
-    t1 = time.time()
-    features_cov = []
-    for radius in MULTISCALE:
-        verticality, linearity, planarity, sphericity, omnivariance, anisotropy, eigenentropy, sumeigen, change_curvature = compute_covariance_features(
-            subcloud, point_cloud, tree, radius=radius)
-        # Assemble local covariance features.
-        features_cov_local = np.vstack(
-            (verticality, linearity, planarity,
-             sphericity, omnivariance, anisotropy,
-             eigenentropy, sumeigen, change_curvature)
-        ).T
-        # Add to multi-scale list of covariance features.
-        features_cov.append(features_cov_local)
-    # Stack all covariance features.
-    features_cov = np.hstack(features_cov)
-    if verbose:
-        print('  Covariance features computed in time %.2f' %
-              (time.time() - t1), end=' ')
-        # print('feat cov shape:', features_cov.shape)
-
-    t1 = time.time()
-    A1, A2, A3, A4, D3, bins = shape_distributions(
-        subcloud, point_cloud, tree, RADIUS_SHAPE, PULLS, NUM_BINS)
-    features_shape = np.vstack((A1, A2, A3, A4, D3)).T
-    if verbose:
-        print('  Shape features computed in time: %.2f' %
-              (time.time() - t1))
-    features = np.append(features_cov, features_shape, axis=1)
-    return features
 
 
 CACHE = {}
@@ -147,7 +99,7 @@ def main(max_depth=3, n_estimators=100, cache=CACHE):
                     train_cloud, train_label, SIZE)
                 print("Train cloud #%d -- Subsampling time: %.3f"
                       % ((i + 1), time.time() - t1))
-                features = assemble_features(train_cloud, subcloud, tree)
+                features = assemble_features(train_cloud, subcloud, tree,MULTISCALE,RADIUS_SHAPE)
                 features = np.hstack((features,
                                       subcloud[:, -1].reshape(-1, 1)))
                 feature_list_.append(features)
@@ -179,7 +131,7 @@ def main(max_depth=3, n_estimators=100, cache=CACHE):
                 print("Computing val set features.")
                 for i in tqdm.tqdm(range(n_split + 1)):
                     sub_val_cloud = new_val_cloud[i * 100000:min((i + 1) * 100000, len(new_val_cloud))]
-                    sub_features = assemble_features(val_cloud, sub_val_cloud, val_tree)
+                    sub_features = assemble_features(val_cloud, sub_val_cloud, val_tree,MULTISCALE,RADIUS_SHAPE)
                     os.makedirs('features/val', exist_ok=True)
                     np.save('features/val/' + str(i) + '.npy', sub_features)
                     sub_features = np.hstack((sub_features, sub_val_cloud[:, -1].reshape(-1, 1)))
@@ -244,7 +196,7 @@ def main(max_depth=3, n_estimators=100, cache=CACHE):
                     train_cloud, train_label, SIZE)
                 print("Train cloud #%d -- Subsampling time: %.3f" %
                       ((i + 1), time.time() - t1))
-                features = assemble_features(train_cloud, subcloud, tree)
+                features = assemble_features(train_cloud, subcloud, tree,MULTISCALE,RADIUS_SHAPE)
 
                 feature_list_.append(features)
                 label_list_.append(sublabels)
@@ -275,7 +227,7 @@ def main(max_depth=3, n_estimators=100, cache=CACHE):
             print("Computing test set features.")
             for i in tqdm.tqdm(range(n_split + 1)):
                 sub_test_cloud = test_cloud[i * 100000:min((i + 1) * 100000, len(test_cloud))]
-                features_test = assemble_features(test_cloud, sub_test_cloud, tree, verbose=False)
+                features_test = assemble_features(test_cloud, sub_test_cloud, tree, MULTISCALE,RADIUS_SHAPE)
                 os.makedirs('features/test', exist_ok=True)
                 np.save('features/test/' + str(i) + '.npy', features_test)
                 features_test = np.hstack((features_test, sub_test_cloud[:, -1].reshape(-1, 1)))
