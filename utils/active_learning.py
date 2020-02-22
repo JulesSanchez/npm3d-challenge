@@ -51,4 +51,4 @@ def active_learning(dic_info, classifier, n_repeats = 50, n_indices=20):
         dic_info = get_new_indices(dic_info, classifier, n_indices)
         classifier = train_simple(dic_info, classifier)
         print("One pass of active learning done.")
-    return classifier
+    return classifier, dic_info

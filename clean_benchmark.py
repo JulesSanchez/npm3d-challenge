@@ -21,7 +21,7 @@ N_ACTIVE = 20
 N_AJOUT = 100
 NAME_MODEL = "active_classifier.pickle"
 BASE_MODEL = "base_classifier.pickle"
-VAL_MODEL = BASE_MODEL
+VAL_MODEL = NAME_MODEL
 N_SLICE = 6
 VAL_PART = [0,1]
 
@@ -77,11 +77,13 @@ def train(max_depth=3, n_estimators=100, n_split=N_SLICE, cache=CACHE):
         pickle.dump(base_classifier, f)
 
     #Apply active learning and save resulting classifier
-    active_classifier = active_learning(train_info,base_classifier,N_ACTIVE,N_AJOUT)
+    active_classifier, new_dic = active_learning(train_info,base_classifier,N_ACTIVE,N_AJOUT)
+    for name in new_dic:
+        np.savetxt(os.path.join('features/' + name, 'indices_train.txt'),new_dic[name]['indices_train'].astype(int), fmt='%i')
     with open(NAME_MODEL, 'wb') as f:
         pickle.dump(active_classifier, f)
 
-def predict_labels(classifier_path, names, features, n_split=N_SLICE, true_labels = None):
+def predict_labels(classifier_path, names, features, n_split=N_SLICE, path=PATH_TRAIN, true_labels = None):
     
     #Load Classifier
     with open(classifier_path, 'rb') as f:
@@ -89,12 +91,12 @@ def predict_labels(classifier_path, names, features, n_split=N_SLICE, true_label
 
     predictions = []
     labels = []
-
+    training = not true_labels is None
     #For each dataset, and relevant features name, load appropriately
     for name in names:
 
         if not os.path.isdir(os.path.join('features',name)):
-            precompute_features(os.path.join(PATH_TRAIN, name + EXTENSION), os.path.join('features',name), RADII_COV, RADII_SHAPE, n_slice=n_split)
+            precompute_features(os.path.join(path, name + EXTENSION), os.path.join('features',name), RADII_COV, RADII_SHAPE, n_slice=n_split, is_train=training)
 
         feats = get_features(os.path.join('features',name),features)
         predictions.append(classifier.predict_proba(feats))
@@ -102,7 +104,7 @@ def predict_labels(classifier_path, names, features, n_split=N_SLICE, true_label
             labels.append(get_labels(os.path.join('features',name),features))
 
     n_classes = predictions[0].shape[-1]
-    if not true_labels is None:
+    if training:
         return predictions, labels
     else:
         return np.array(predictions).reshape(-1,n_classes)
@@ -142,12 +144,13 @@ if __name__ == '__main__':
 
     #Run pipeline on test set
     if True:
-        preds = predict_labels(VAL_MODEL,NAMETEST,list(range(N_SLICE+1)),true_labels=None)
+       preds = predict_labels(VAL_MODEL,NAMETEST,list(range(N_SLICE+1)),path=PATH_TEST,true_labels=None)
         test_cloud, _ = load_point_cloud(
             os.path.join(PATH_TEST, NAMETEST[0]) + EXTENSION)
-        g = graph.make_graph(test_cloud)
-        graph.write_graph(g, preds[0] * 100, '')
-        run_graphcut()
+        # g = graph.make_graph(test_cloud)
+        # graph.write_graph(g, preds[0] * 100, '')
+        write_results(NAMETEST[0] + '/', preds[0] * 100, False)
+        run_graphcut(NAMETEST[0])
 
 
     
