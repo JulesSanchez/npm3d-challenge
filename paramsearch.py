@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from utils.loader import cross_val, load_point_cloud, write_results
 from utils import graph
 from sklearn.metrics import jaccard_score
+# TODO use right imports
+# from clean_benchmark import run_graphcut, train, predict_labels
 from benchmark import run_graphcut, main as run_benchmark
 import os
 import hyperopt
@@ -29,7 +31,9 @@ def validation_objective(hyperparameters):
     max_depth = int(hyperparameters['max_depth'])
     n_estimators = int(hyperparameters['n_estimators'])
     num_neighbors = int(hyperparameters['num_neighbors'])
+    alpha = hyperparameters['l1_reg']
 
+    # TODO modify benchmark function to accept max_depth, n_estimastors, XGBoost alpha
     soft_labels = run_benchmark(max_depth, n_estimators)
 
     data_cross_val = cross_val()
@@ -50,6 +54,7 @@ def validation_objective(hyperparameters):
         graph.write_graph(g, soft_labels * 100, '')
     print("Created nodes and edges files.")
 
+    # TODO modify for new version of `run_graphcut`
     run_graphcut()
 
     # load hard labels
@@ -67,7 +72,8 @@ if __name__ == "__main__":
     space = {
         'max_depth': hp.quniform('xgb_max_depth', 2, 6, 1),
         'n_estimators': hp.quniform('xgb_n_estimators', 50, 500, 1),
-        'num_neighbors': 9
+        'num_neighbors': 9,
+        'l1_reg': hp.qlognormal('xgb_alpha', -1, 1)  # use exp(N(-1, 1)) prior
     }
     
     maxiters = 10
