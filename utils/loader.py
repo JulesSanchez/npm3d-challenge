@@ -67,21 +67,6 @@ def load_downsampled_point_cloud(path_output):
     except:
         return point_cloud, tree
 
-def get_labels(path,list_labels):
-    labels = []
-    for i in list_labels:
-        labels.append(np.load(path + str(i) + '_labels.npy'))
-    return np.hstack(labels)
-
-def get_features(path, list_features, list_labels = None):
-    features = []
-    for i in list_features:
-        features.append(np.load(path + str(i) + '.npy'))
-    if list_labels is None:
-        return np.vstack(list_features)
-    else :
-        return np.vstack(list_features)[list_labels]
-
 def load_point_cloud(name, down_sample=False):
     """Load the point cloud.
     

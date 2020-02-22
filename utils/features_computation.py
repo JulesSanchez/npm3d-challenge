@@ -2,9 +2,10 @@
 import numpy as np
 # Import functions from scikit-learn
 from sklearn.neighbors import KDTree
-import time
+import time, tqdm, os
+from plyfile import PlyData
+import open3d as o3d
 import numba
-from loader import load_point_cloud
 EPSILON = 1e-10 
 
 @numba.njit
@@ -179,7 +180,7 @@ def assemble_features(point_cloud: np.ndarray, subcloud: np.ndarray, tree, scale
     features_shape = []
     for radius in scales_shape:
         A1, A2, A3, A4, D3, bins = shape_distributions(
-            subcloud, point_cloud, tree, scales_shape, PULLS, NUM_BINS)
+            subcloud, point_cloud, tree, radius, PULLS, NUM_BINS)
         features_shape_local = np.vstack((A1, A2, A3, A4, D3)).T
         # Add to multi-scale list of covariance features.
         features_shape.append(features_shape_local)
@@ -190,7 +191,19 @@ def assemble_features(point_cloud: np.ndarray, subcloud: np.ndarray, tree, scale
     features = np.append(features_cov, features_shape, axis=1)
     return features
 
-def precompute_features(path,save_path,cov_scale,shape_scale,is_train=True,n_slice=3)
+def load_point_cloud(name, down_sample=False):
+    plydata = PlyData.read(name)
+    pcd = o3d.io.read_point_cloud(name)
+    if down_sample:
+        downpcd = pcd.voxel_down_sample(voxel_size=down_sample)
+    pcd_tree = o3d.geometry.KDTreeFlann(pcd)
+    try:
+        return np.asarray(pcd.points), np.asarray(plydata.elements[0].data['class']), pcd_tree
+    except:
+        return np.asarray(pcd.points), pcd_tree
+
+
+def precompute_features(path,save_path,cov_scale,shape_scale,is_train=True,n_slice=3):
     if is_train:
         cloud, label, tree = load_point_cloud(path)
         local_cloud = cloud[label>0]
@@ -202,15 +215,15 @@ def precompute_features(path,save_path,cov_scale,shape_scale,is_train=True,n_sli
     # then compute features on each slice.
     print("Computing features.")
     len_slice = len(local_cloud)//n_slice
+    os.makedirs(save_path, exist_ok=True)
     for i in tqdm.tqdm(range(n_slice+1)):
         sub_cloud = local_cloud[i * len_slice:min((i + 1) * len_slice, len(cloud))]
         sub_features = assemble_features(cloud, sub_cloud, tree, cov_scale, shape_scale)
         sub_features = np.hstack((sub_features, sub_cloud[:, -1].reshape(-1, 1)))
-        os.makedirs(save_path, exist_ok=True)
-        np.save(save_path + str(i) + '.npy', sub_features)
+        np.save(os.path.join(save_path, str(i) + '.npy'), sub_features)
         if is_train:
             sub_labels = local_label[i * len_slice:min((i + 1) * len_slice, len(cloud))]
-            np.save(save_path + str(i) + '_labels.npy', sub_labels)
+            np.save(os.path.join(save_path, str(i) + '_labels.npy'), sub_labels)
     return len_slice
 
 def tda_features(point_cloud: np.ndarray):
