@@ -29,7 +29,9 @@ def validation_objective(hyperparameters):
     max_depth = int(hyperparameters['max_depth'])
     n_estimators = int(hyperparameters['n_estimators'])
     num_neighbors = int(hyperparameters['num_neighbors'])
+    alpha = hyperparameters['l1_reg']
 
+    # TODO modify benchmark function to accept max_depth, n_estimastors, XGBoost alpha
     soft_labels = run_benchmark(max_depth, n_estimators)
 
     data_cross_val = cross_val()
@@ -67,7 +69,8 @@ if __name__ == "__main__":
     space = {
         'max_depth': hp.quniform('xgb_max_depth', 2, 6, 1),
         'n_estimators': hp.quniform('xgb_n_estimators', 50, 500, 1),
-        'num_neighbors': 9
+        'num_neighbors': 9,
+        'l1_reg': hp.qlognormal('xgb_alpha', -1, 1)  # use exp(N(-1, 1)) prior
     }
     
     maxiters = 10
