@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from utils.loader import cross_val, load_point_cloud, write_results
 from utils import graph
 from sklearn.metrics import jaccard_score
+# TODO use right imports
+# from clean_benchmark import run_graphcut, train, predict_labels
 from benchmark import run_graphcut, main as run_benchmark
 import os
 import hyperopt
@@ -52,6 +54,7 @@ def validation_objective(hyperparameters):
         graph.write_graph(g, soft_labels * 100, '')
     print("Created nodes and edges files.")
 
+    # TODO modify for new version of `run_graphcut`
     run_graphcut()
 
     # load hard labels
