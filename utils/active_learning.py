@@ -2,20 +2,23 @@ import numpy as np
 import os
 EPSILON = 10e-10
 
-def get_labels(path,list_labels):
+def get_labels(path,list_labels, indices = None):
     labels = []
     for i in list_labels:
         labels.append(np.load(os.path.join(path,str(i) + '_labels.npy')))
-    return np.hstack(labels)
+    if indices is None:
+        return np.hstack(labels)
+    else :
+        return np.hstack(labels)[indices]
 
-def get_features(path, list_features, list_labels = None):
+def get_features(path, list_features, indices = None):
     features = []
     for i in list_features:
         features.append(np.load(os.path.join(path, str(i) + '.npy')))
-    if list_labels is None:
+    if indices is None:
         return np.vstack(features)
     else :
-        return np.vstack(features)[list_labels]
+        return np.vstack(features)[indices]
 
 def train_simple(dic_info, classifier):
     features = []

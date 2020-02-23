@@ -21,6 +21,7 @@ N_ACTIVE = 20
 N_AJOUT = 100
 NAME_MODEL = "active_classifier.pickle"
 BASE_MODEL = "base_classifier.pickle"
+PARAM_MODEL = "last_classifier.pickle"
 VAL_MODEL = NAME_MODEL
 N_SLICE = 6
 VAL_PART = [0,1]
@@ -83,6 +84,17 @@ def train(max_depth=3, n_estimators=100, n_split=N_SLICE, cache=CACHE):
     with open(NAME_MODEL, 'wb') as f:
         pickle.dump(active_classifier, f)
 
+def train_paramsearch(max_depth,n_estimators,alpha):
+    classifier = xgb.XGBClassifier(max_depth=max_depth,n_estimators=n_estimators,reg_alpha=alpha,objective='multi:softprob')
+    dic = create_train_dictionnary(N_SLICE)
+    for name in dic:
+        indices = np.loadtxt(os.path.join('features/' + name, 'indices_train.txt')).astype(int)
+        dic[name]['indices_train'] = indices
+        dic[name]['label_train'] = get_labels(dic[name]['path'],dic[name]['train'],indices)
+    with open(PARAM_MODEL, 'wb') as f:
+        pickle.dump(train_simple(dic,classifier), f)
+
+
 def predict_labels(classifier_path, names, features, n_split=N_SLICE, path=PATH_TRAIN, true_labels = None):
     
     #Load Classifier
@@ -144,12 +156,12 @@ if __name__ == '__main__':
 
     #Run pipeline on test set
     if True:
-       preds = predict_labels(VAL_MODEL,NAMETEST,list(range(N_SLICE+1)),path=PATH_TEST,true_labels=None)
+        preds = predict_labels(PARAM_MODEL,NAMETEST,list(range(N_SLICE+1)),path=PATH_TEST,true_labels=None)
         test_cloud, _ = load_point_cloud(
             os.path.join(PATH_TEST, NAMETEST[0]) + EXTENSION)
         # g = graph.make_graph(test_cloud)
-        # graph.write_graph(g, preds[0] * 100, '')
-        write_results(NAMETEST[0] + '/', preds[0] * 100, False)
+        # graph.write_graph(g, preds * 100, '')
+        write_results(NAMETEST[0] + '/', preds * 100, False)
         run_graphcut(NAMETEST[0])
 
 
